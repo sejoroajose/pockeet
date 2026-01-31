@@ -1,12 +1,13 @@
 {
-  "name": "crossvault",
+  "name": "pockeet",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "commit": "cz"
   },
   "dependencies": {
     "@ensdomains/ensjs": "^4.2.2",
@@ -14,6 +15,7 @@
     "@mysten/sui": "^2.0.1",
     "@tanstack/react-query": "^5.90.20",
     "clsx": "^2.1.1",
+    "commitizen": "^4.3.1",
     "connectkit": "^1.9.1",
     "date-fns": "^4.1.0",
     "next": "16.1.6",
@@ -28,9 +30,15 @@
     "@types/node": "^25.1.0",
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
+    "cz-conventional-changelog": "^3.3.0",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.6",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3"
+  },
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
   }
 }
