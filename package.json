@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "commit": "cz"
+    "commit": "cz",
+    "release": "standard-version",
+    "release:dry": "standard-version --dry-run"
   },
   "dependencies": {
     "@ensdomains/ensjs": "^4.2.2",
@@ -33,6 +35,7 @@
     "cz-conventional-changelog": "^3.3.0",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.6",
+    "standard-version": "^9.5.0",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3"
   },
