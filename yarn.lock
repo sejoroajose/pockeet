@@ -436,6 +436,26 @@
     "@eslint/core" "^0.17.0"
     levn "^0.4.1"
 
+"@floating-ui/core@^1.7.4":
+  version "1.7.4"
+  resolved "https://registry.yarnpkg.com/@floating-ui/core/-/core-1.7.4.tgz#4a006a6e01565c0f87ba222c317b056a2cffd2f4"
+  integrity sha512-C3HlIdsBxszvm5McXlB8PeOEWfBhcGBTZGkGlWc2U0KFY5IwG5OQEuQ8rq52DZmcHDlPLd+YFBK+cZcytwIFWg==
+  dependencies:
+    "@floating-ui/utils" "^0.2.10"
+
+"@floating-ui/dom@^1.7.4":
+  version "1.7.5"
+  resolved "https://registry.yarnpkg.com/@floating-ui/dom/-/dom-1.7.5.tgz#60bfc83a4d1275b2a90db76bf42ca2a5f2c231c2"
+  integrity sha512-N0bD2kIPInNHUHehXhMke1rBGs1dwqvC9O9KYMyyjK7iXt7GAhnro7UlcuYcGdS/yYOlq0MAVgrow8IbWJwyqg==
+  dependencies:
+    "@floating-ui/core" "^1.7.4"
+    "@floating-ui/utils" "^0.2.10"
+
+"@floating-ui/utils@^0.2.10":
+  version "0.2.10"
+  resolved "https://registry.yarnpkg.com/@floating-ui/utils/-/utils-0.2.10.tgz#a2a1e3812d14525f725d011a73eceb41fef5bc1c"
+  integrity sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==
+
 "@gql.tada/cli-utils@1.7.2":
   version "1.7.2"
   resolved "https://registry.npmmirror.com/@gql.tada/cli-utils/-/cli-utils-1.7.2.tgz#3dcdc4baacaed8f499b65b4202fdccdaf7340273"
@@ -696,6 +716,38 @@
   dependencies:
     viem "^2.33.2"
 
+"@lit-labs/scoped-registry-mixin@^1.0.4":
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/@lit-labs/scoped-registry-mixin/-/scoped-registry-mixin-1.0.4.tgz#6fac7ce2a46762c05fae70fdb335861363a585a2"
+  integrity sha512-gYeotwRwluD7RsFgU0eP48WgBMg6fIF5RXzbrjs/gwsPiJiFtal90s+x/LHIHqQ2VkubsyP+m+QAfgmOnsNhUg==
+  dependencies:
+    "@lit/reactive-element" "^1.0.0 || ^2.0.0"
+    lit "^2.0.0 || ^3.0.0"
+
+"@lit-labs/ssr-dom-shim@^1.5.0":
+  version "1.5.1"
+  resolved "https://registry.yarnpkg.com/@lit-labs/ssr-dom-shim/-/ssr-dom-shim-1.5.1.tgz#3166900c0d481f03d6d4133686e0febf760d521d"
+  integrity sha512-Aou5UdlSpr5whQe8AA/bZG0jMj96CoJIWbGfZ91qieWu5AWUMKw8VR/pAkQkJYvBNhmCcWnZlyyk5oze8JIqYA==
+
+"@lit/react@^1.0.8":
+  version "1.0.8"
+  resolved "https://registry.yarnpkg.com/@lit/react/-/react-1.0.8.tgz#b3e229173b7b57d550909bf95d8f3da1a9510557"
+  integrity sha512-p2+YcF+JE67SRX3mMlJ1TKCSTsgyOVdAwd/nxp3NuV1+Cb6MWALbN6nT7Ld4tpmYofcE5kcaSY1YBB9erY+6fw==
+
+"@lit/reactive-element@^1.0.0 || ^2.0.0", "@lit/reactive-element@^2.1.0":
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/@lit/reactive-element/-/reactive-element-2.1.2.tgz#4c6af9042603c98e61ba90b294607904d51b61cb"
+  integrity sha512-pbCDiVMnne1lYUIaYNN5wrwQXDtHaYtg7YEFPeW+hws6U47WeFvISGUWekPGKWOP1ygrs0ef0o1VJMk1exos5A==
+  dependencies:
+    "@lit-labs/ssr-dom-shim" "^1.5.0"
+
+"@lit/task@^1.0.3":
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/@lit/task/-/task-1.0.3.tgz#52a66f0689d0aa9567b58df46842d29bbb8be20f"
+  integrity sha512-1gJGJl8WON+2j0y9xfcD+XsS1rvcy3XDgsIhcdUW++yTR8ESjZW6o7dn8M8a4SZM8NnJe6ynS2cKWwsbfLOurg==
+  dependencies:
+    "@lit/reactive-element" "^1.0.0 || ^2.0.0"
+
 "@motionone/animation@^10.12.0":
   version "10.18.0"
   resolved "https://registry.npmmirror.com/@motionone/animation/-/animation-10.18.0.tgz#868d00b447191816d5d5cf24b1cafa144017922b"
@@ -765,6 +817,44 @@
     "@mysten/utils" "^0.3.0"
     "@scure/base" "^2.0.0"
 
+"@mysten/dapp-kit-core@^1.0.1":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@mysten/dapp-kit-core/-/dapp-kit-core-1.0.2.tgz#e72d87c83ecfcee834f8f4ecd7d21116ed4eab80"
+  integrity sha512-j0Bk8rWJeHAnAWM5Rh2ruGOJs+F1/mFDKXiG+H4S+ADuiNkE3osdY5pntg+jzCZW5bkkmMI4gc03f2Ba3cr3Tw==
+  dependencies:
+    "@floating-ui/dom" "^1.7.4"
+    "@lit-labs/scoped-registry-mixin" "^1.0.4"
+    "@lit/task" "^1.0.3"
+    "@mysten/slush-wallet" "^1.0.1"
+    "@mysten/utils" "^0.3.0"
+    "@mysten/wallet-standard" "^0.20.0"
+    "@nanostores/lit" "^0.2.3"
+    "@wallet-standard/ui" "^1.0.1"
+    "@wallet-standard/ui-registry" "^1.0.1"
+    "@webcomponents/scoped-custom-element-registry" "^0.0.10"
+    lit "^3.3.2"
+    nanostores "^1.1.0"
+
+"@mysten/dapp-kit-react@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@mysten/dapp-kit-react/-/dapp-kit-react-1.0.1.tgz#36163c50bf52fd4caf0a81d554d777088926e53f"
+  integrity sha512-/SUDlr8OTSBH5FfjuCdoAshNFhrJ4Mp6yPhokSFvIGEjYmrJ823RF/u4psHOL1GHfKO4Tvt58eYuLXBUcL3nmA==
+  dependencies:
+    "@lit/react" "^1.0.8"
+    "@mysten/dapp-kit-core" "^1.0.1"
+    "@nanostores/react" "^1.0.0"
+    nanostores "^1.1.0"
+
+"@mysten/slush-wallet@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@mysten/slush-wallet/-/slush-wallet-1.0.1.tgz#a293738fd8b27053b65f06be749d103d93667870"
+  integrity sha512-ry6RX20mSvaeDFclHdWZOr3vkyvGqb8WwhXndx5hEafv11JCrzqNpv/4FAGFdEPLt1HzMu51bQ/MyHtbxZXULA==
+  dependencies:
+    "@mysten/utils" "^0.3.0"
+    "@mysten/wallet-standard" "^0.20.0"
+    "@mysten/window-wallet-core" "^0.1.2"
+    valibot "^1.2.0"
+
 "@mysten/sui@1.45.2", "@mysten/sui@^1.45.2":
   version "1.45.2"
   resolved "https://registry.npmmirror.com/@mysten/sui/-/sui-1.45.2.tgz#cd5f06226e3db74eba163d1deb180e53f9ec147b"
@@ -786,10 +876,10 @@
     poseidon-lite "0.2.1"
     valibot "^1.2.0"
 
-"@mysten/sui@^2.0.1":
-  version "2.0.1"
-  resolved "https://registry.npmmirror.com/@mysten/sui/-/sui-2.0.1.tgz#6a88e342c6d5803928d932e5e9921466a3e2c326"
-  integrity sha512-uFaD9sPwi9Wy+KlSc2uMhjo+yWEay4SOc6RP9cj16+CpzbzRijXtRFagQytQJ0KXM6qCTlwWtXpkmkFGuMA98w==
+"@mysten/sui@^2.1.0":
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/@mysten/sui/-/sui-2.1.0.tgz#9b0503918e108d3ad7b0d43022ea8c783f306ca7"
+  integrity sha512-q1keHOsvNrkfM+rCUHJRFDHagrdr7rCIsNGhM9NrtShAMtCEgCiChuCFGHGVjb3/J2CFj+SxPIG5fEb5bj+9UQ==
   dependencies:
     "@graphql-typed-document-node/core" "^3.2.0"
     "@mysten/bcs" "^2.0.1"
@@ -828,6 +918,32 @@
   dependencies:
     "@mysten/sui" "1.45.2"
     "@wallet-standard/core" "1.1.1"
+
+"@mysten/wallet-standard@^0.20.0":
+  version "0.20.0"
+  resolved "https://registry.yarnpkg.com/@mysten/wallet-standard/-/wallet-standard-0.20.0.tgz#5cb5f9825ee9eee0a7ee3c4b30043e1e425f9f3a"
+  integrity sha512-GtPDZu212uRjcKFEgYh6sOkSOIv1jhO62DqmDYQ+IyzHb2Kqa/6pzaWsKBY0Ij2FYUQPrTdo4PJuoASPbqpICw==
+  dependencies:
+    "@wallet-standard/core" "1.1.1"
+
+"@mysten/window-wallet-core@^0.1.2":
+  version "0.1.2"
+  resolved "https://registry.yarnpkg.com/@mysten/window-wallet-core/-/window-wallet-core-0.1.2.tgz#5657146199fcc6c099a150e1530905475d300d7d"
+  integrity sha512-pZCz62cIdptSjpeafEBeHVB908aoe5pfgreJLa/GrnSszIHkGECw7jA27urISuyCq5T+OYS3360Hg6YmLhgZVg==
+  dependencies:
+    "@mysten/utils" "^0.3.0"
+    jose "^6.1.3"
+    valibot "^1.2.0"
+
+"@nanostores/lit@^0.2.3":
+  version "0.2.3"
+  resolved "https://registry.yarnpkg.com/@nanostores/lit/-/lit-0.2.3.tgz#0f41ca5cd7d57b42351dc2ea2416b3689d8e09a6"
+  integrity sha512-hIUKzdNrgKXkXCsppzQxmYYYMTn96cncijWhzcYZKn3Yimqj7B6YK94qN/KObjBNEe0xR3JLgMo96ew5fVtW2w==
+
+"@nanostores/react@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@nanostores/react/-/react-1.0.0.tgz#5804f925f36e6926c43bc25277b93131644676ed"
+  integrity sha512-eDduyNy+lbQJMg6XxZ/YssQqF6b4OXMFEZMYKPJCCmBevp1lg0g+4ZRi94qGHirMtsNfAWKNwsjOhC+q1gvC+A==
 
 "@napi-rs/wasm-runtime@^0.2.11":
   version "0.2.12"
@@ -1258,7 +1374,7 @@
 
 "@tanstack/react-query@^5.90.20":
   version "5.90.20"
-  resolved "https://registry.npmmirror.com/@tanstack/react-query/-/react-query-5.90.20.tgz#42bb7018bfedc72f216b6e9b4052c919063f350b"
+  resolved "https://registry.yarnpkg.com/@tanstack/react-query/-/react-query-5.90.20.tgz#42bb7018bfedc72f216b6e9b4052c919063f350b"
   integrity sha512-vXBxa+qeyveVO7OA0jX1z+DeyCA4JKnThKv411jd5SORpBKgkcVnYKCiBgECvADvniBX7tobwBmg01qq9JmMJw==
   dependencies:
     "@tanstack/query-core" "5.90.20"
@@ -1376,6 +1492,11 @@
   integrity sha512-WPigyYuGhgZ/cTPRXB2EwUw+XvsRA3GqHlsP4qteqrnnjDrApbS7MxcGr/hke5iUoeB7E/gQtrs9I37zAJ0Vjw==
   dependencies:
     csstype "^3.2.2"
+
+"@types/trusted-types@^2.0.2":
+  version "2.0.7"
+  resolved "https://registry.yarnpkg.com/@types/trusted-types/-/trusted-types-2.0.7.tgz#baccb07a970b91707df3a3e8ba6896c57ead2d11"
+  integrity sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==
 
 "@types/use-sync-external-store@^0.0.6":
   version "0.0.6"
@@ -1615,7 +1736,7 @@
   dependencies:
     "@wallet-standard/base" "^1.1.0"
 
-"@wallet-standard/base@^1.1.0":
+"@wallet-standard/base@1.1.0", "@wallet-standard/base@^1.1.0":
   version "1.1.0"
   resolved "https://registry.npmmirror.com/@wallet-standard/base/-/base-1.1.0.tgz#214093c0597a1e724ee6dbacd84191dfec62bb33"
   integrity sha512-DJDQhjKmSNVLKWItoKThJS+CsJQjR9AOBOirBVT1F9YpRyC9oYHE+ZnSf8y8bxUphtKqdQMPVQ2mHohYdRvDVQ==
@@ -1631,7 +1752,7 @@
     "@wallet-standard/features" "^1.1.0"
     "@wallet-standard/wallet" "^1.1.0"
 
-"@wallet-standard/errors@^0.1.1":
+"@wallet-standard/errors@0.1.1", "@wallet-standard/errors@^0.1.1":
   version "0.1.1"
   resolved "https://registry.npmmirror.com/@wallet-standard/errors/-/errors-0.1.1.tgz#e745c5925276c0ac6d02f0d489888c171f5e4680"
   integrity sha512-V8Ju1Wvol8i/VDyQOHhjhxmMVwmKiwyxUZBnHhtiPZJTWY0U/Shb2iEWyGngYEbAkp2sGTmEeNX1tVyGR7PqNw==
@@ -1646,12 +1767,61 @@
   dependencies:
     "@wallet-standard/base" "^1.1.0"
 
+"@wallet-standard/ui-compare@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@wallet-standard/ui-compare/-/ui-compare-1.0.1.tgz#7debd0267976ea8fd86d072a836ce2e987c6e61f"
+  integrity sha512-Qr6AjgxTgTNgjUm/HQend08jFCUJ2ugbONpbC1hSl4Ndul+theJV3CwVZ2ffKun584bHoR8OAibJ+QA4ecogEA==
+  dependencies:
+    "@wallet-standard/base" "1.1.0"
+    "@wallet-standard/ui-core" "1.0.0"
+    "@wallet-standard/ui-registry" "1.0.1"
+
+"@wallet-standard/ui-core@1.0.0", "@wallet-standard/ui-core@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@wallet-standard/ui-core/-/ui-core-1.0.0.tgz#8fb02c02eb064545cc9d756c1102ba33ee860aeb"
+  integrity sha512-pnpBfxJois0fIAI0IBJ6hopOguw81JniB6DzOs5J7C16W7/M2kC0OKHQFKrz6cgSGMq8X0bPA8nZTXFTSNbURg==
+  dependencies:
+    "@wallet-standard/base" "1.1.0"
+
+"@wallet-standard/ui-features@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@wallet-standard/ui-features/-/ui-features-1.0.1.tgz#a546e28d68b00b39e253006eb9c42dec871c1387"
+  integrity sha512-0/lZFx599bGcDEvisAWtbFMuRM/IuqP/o0vbhAeQdLWsWsaqFTUIKZtMt8JJq+fFBMQGc6tuRH6ehrgm+Y0biQ==
+  dependencies:
+    "@wallet-standard/base" "1.1.0"
+    "@wallet-standard/errors" "0.1.1"
+    "@wallet-standard/ui-core" "1.0.0"
+    "@wallet-standard/ui-registry" "1.0.1"
+
+"@wallet-standard/ui-registry@1.0.1", "@wallet-standard/ui-registry@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@wallet-standard/ui-registry/-/ui-registry-1.0.1.tgz#d4d751433b5e9ada6f3cd3d810cfbb194ba67a9a"
+  integrity sha512-+SeXEwSoyqEWv9B6JLxRioRlgN5ksSFObZMf+XKm2U+vwmc/mfm43I8zw5wvGBpubzmywbe2eejd5k/snyx+uA==
+  dependencies:
+    "@wallet-standard/base" "1.1.0"
+    "@wallet-standard/errors" "0.1.1"
+    "@wallet-standard/ui-core" "1.0.0"
+
+"@wallet-standard/ui@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@wallet-standard/ui/-/ui-1.0.1.tgz#23ffd5a5096750213e0efd58bce75322ba33456f"
+  integrity sha512-3b1iSfHOB3YpuBM645ZAgA0LMGZv+3Eh4y9lM3kS+NnvK4NxwnEdn1mLbFxevRhyulNjFZ50m2Cq5mpEOYs2mw==
+  dependencies:
+    "@wallet-standard/ui-compare" "^1.0.1"
+    "@wallet-standard/ui-core" "^1.0.0"
+    "@wallet-standard/ui-features" "^1.0.1"
+
 "@wallet-standard/wallet@^1.1.0":
   version "1.1.0"
   resolved "https://registry.npmmirror.com/@wallet-standard/wallet/-/wallet-1.1.0.tgz#a1e46a3f1b2d06a0206058562169b1f0e9652d0f"
   integrity sha512-Gt8TnSlDZpAl+RWOOAB/kuvC7RpcdWAlFbHNoi4gsXsfaWa1QCT6LBcfIYTPdOZC9OVZUDwqGuGAcqZejDmHjg==
   dependencies:
     "@wallet-standard/base" "^1.1.0"
+
+"@webcomponents/scoped-custom-element-registry@^0.0.10":
+  version "0.0.10"
+  resolved "https://registry.yarnpkg.com/@webcomponents/scoped-custom-element-registry/-/scoped-custom-element-registry-0.0.10.tgz#355b7cd695373b7b37b5ead85cb638c82b42a539"
+  integrity sha512-wP4LF28aysE2Pq3NQRNQxko7Q0vOOwcoOSMg8FFI4S6z76UuXkYIc5ndC31dJMwso1/vSteL75LW2CEKedAJbA==
 
 JSONStream@^1.0.4:
   version "1.3.5"
@@ -4166,6 +4336,11 @@ jiti@^2.6.1:
   resolved "https://registry.npmmirror.com/jiti/-/jiti-2.6.1.tgz#178ef2fc9a1a594248c20627cd820187a4d78d92"
   integrity sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==
 
+jose@^6.1.3:
+  version "6.1.3"
+  resolved "https://registry.yarnpkg.com/jose/-/jose-6.1.3.tgz#8453d7be88af7bb7d64a0481d6a35a0145ba3ea5"
+  integrity sha512-0TpaTfihd4QMNwrz/ob2Bp7X04yuxJkjRGi4aKmOqwhov54i6u79oCv7T+C7lo70MKH6BesI3vscD1yb/yzKXQ==
+
 "js-tokens@^3.0.0 || ^4.0.0", js-tokens@^4.0.0:
   version "4.0.0"
   resolved "https://registry.npmmirror.com/js-tokens/-/js-tokens-4.0.0.tgz#19203fb59991df98e3a287050d4647cdeaf32499"
@@ -4364,6 +4539,31 @@ lines-and-columns@^1.1.6:
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/lines-and-columns/-/lines-and-columns-1.2.4.tgz#eca284f75d2965079309dc0ad9255abb2ebc1632"
   integrity sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==
+
+lit-element@^4.2.0:
+  version "4.2.2"
+  resolved "https://registry.yarnpkg.com/lit-element/-/lit-element-4.2.2.tgz#f74fcbfbea945eae5614ece22a674fa52ca3365b"
+  integrity sha512-aFKhNToWxoyhkNDmWZwEva2SlQia+jfG0fjIWV//YeTaWrVnOxD89dPKfigCUspXFmjzOEUQpOkejH5Ly6sG0w==
+  dependencies:
+    "@lit-labs/ssr-dom-shim" "^1.5.0"
+    "@lit/reactive-element" "^2.1.0"
+    lit-html "^3.3.0"
+
+lit-html@^3.3.0:
+  version "3.3.2"
+  resolved "https://registry.yarnpkg.com/lit-html/-/lit-html-3.3.2.tgz#4db11fdbf98fc8a0c5eabd9b1e7d088d3bb201a2"
+  integrity sha512-Qy9hU88zcmaxBXcc10ZpdK7cOLXvXpRoBxERdtqV9QOrfpMZZ6pSYP91LhpPtap3sFMUiL7Tw2RImbe0Al2/kw==
+  dependencies:
+    "@types/trusted-types" "^2.0.2"
+
+"lit@^2.0.0 || ^3.0.0", lit@^3.3.2:
+  version "3.3.2"
+  resolved "https://registry.yarnpkg.com/lit/-/lit-3.3.2.tgz#d9230ebbf237bfd3d2091bc0b56c576a470ac4d7"
+  integrity sha512-NF9zbsP79l4ao2SNrH3NkfmFgN/hBYSQo90saIVI1o5GpjAdCPVstVzO1MrLOakHoEhYkrtRjPK6Ob521aoYWQ==
+  dependencies:
+    "@lit/reactive-element" "^2.1.0"
+    lit-element "^4.2.0"
+    lit-html "^3.3.0"
 
 load-json-file@^4.0.0:
   version "4.0.0"
@@ -4598,6 +4798,11 @@ nanoid@^3.3.11, nanoid@^3.3.6:
   version "3.3.11"
   resolved "https://registry.npmmirror.com/nanoid/-/nanoid-3.3.11.tgz#4f4f112cefbe303202f2199838128936266d185b"
   integrity sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==
+
+nanostores@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/nanostores/-/nanostores-1.1.0.tgz#29eb39795042682a24dc85eeb24f92618ad6066b"
+  integrity sha512-yJBmDJr18xy47dbNVlHcgdPrulSn1nhSE6Ns9vTG+Nx9VPT6iV1MD6aQFp/t52zpf82FhLLTXAXr30NuCnxvwA==
 
 napi-postinstall@^0.3.0:
   version "0.3.4"
