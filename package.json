@@ -1,0 +1,56 @@
+{
+  "name": "pockeet",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "commit": "cz",
+    "sui-build": "cd sui && sui move build",
+    "test": "cd sui && sui move test",
+    "deploy": "ts-node scripts/deploy.ts",
+    "create-vault": "ts-node scripts/create-vault.ts",
+    "test:deposit": "ts-node scripts/test-deposit.ts",
+    "test:withdraw": "ts-node scripts/test-withdraw.ts",
+    "vault:info": "ts-node scripts/vault-info.ts",
+    "clean": "cd sui && rm -rf build",
+    "release": "standard-version",
+    "release:dry": "standard-version --dry-run"
+  },
+  "dependencies": {
+    "@ensdomains/ensjs": "^4.2.2",
+    "@lifi/sdk": "^3.15.4",
+    "@mysten/dapp-kit-react": "^1.0.1",
+    "@mysten/sui": "^2.1.0",
+    "@tanstack/react-query": "^5.90.20",
+    "clsx": "^2.1.1",
+    "commitizen": "^4.3.1",
+    "connectkit": "^1.9.1",
+    "date-fns": "^4.1.0",
+    "next": "16.1.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "recharts": "^3.7.0",
+    "viem": "^2.45.1",
+    "wagmi": "^3.4.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/node": "^25.1.0",
+    "@types/react": "^19.2.10",
+    "@types/react-dom": "^19.2.3",
+    "cz-conventional-changelog": "^3.3.0",
+    "eslint": "^9.39.2",
+    "eslint-config-next": "^16.1.6",
+    "standard-version": "^9.5.0",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3"
+  },
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
+  }
+}
