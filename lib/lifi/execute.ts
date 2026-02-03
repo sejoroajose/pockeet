@@ -27,6 +27,7 @@ export interface ExecuteRouteConfig {
    * Maximum slippage change to accept (as percentage, e.g., 5 for 5%)
    */
   maxSlippageChange?: number;
+  updateRouteHook?: (route: RouteExtended) => void;
 }
 
 /**
