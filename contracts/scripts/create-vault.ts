@@ -27,7 +27,7 @@ const adminCapId = ADMIN_CAP_ID as string;
 const privateKey = PRIVATE_KEY  as string;
 
 async function main() {
-  console.log('🏦 Creating CrossVault...\n');
+  console.log('🏦 Creating Pockeet...\n');
   console.log(`Network: ${NETWORK}`);
   console.log(`Package: ${packageId}\n`);
 

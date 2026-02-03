@@ -35,7 +35,7 @@ export const arcTestnet = {
 
 const wagmiConfig = createConfig(
   getDefaultConfig({
-    appName: 'CrossVault',
+    appName: 'pockeet',
     walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
     chains: [arcTestnet, sepolia, mainnet, base, arbitrum, optimism, polygon],
     transports: {
