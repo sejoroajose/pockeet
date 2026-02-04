@@ -10,6 +10,7 @@ import { Input } from '../ui/input'
 import { Badge } from '../ui/badge'
 import { useLiFiBridge } from '@/lib/lifi/hooks'
 import { CHAIN_METADATA, getUSDCAddress } from '@/lib/lifi/constants'
+import { calculateRouteFees, estimateRouteDuration } from '@/lib/lifi/client'
 import { formatUSDCWithSign } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils/cn'
 
@@ -147,19 +148,19 @@ export function DepositForm() {
               <div className="flex justify-between">
                 <span className="text-gray-600">Estimated Fee:</span>
                 <span className="font-semibold text-gray-900">
-                  ${selectedRoute.fees?.total || '0.00'}
+                  ${calculateRouteFees(selectedRoute).total}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Estimated Time:</span>
                 <span className="font-semibold text-gray-900">
-                  ~{selectedRoute.duration || 15} min
+                  ~{estimateRouteDuration(selectedRoute)} min
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">You'll Receive:</span>
                 <span className="font-semibold text-purple-700">
-                  ~{formatUSDCWithSign(selectedRoute.outputAmount || '0')}
+                  ~{formatUSDCWithSign(selectedRoute.steps[selectedRoute.steps.length - 1].estimate.toAmount)}
                 </span>
               </div>
             </div>
