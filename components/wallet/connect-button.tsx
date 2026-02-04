@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useConnection, useDisconnect } from 'wagmi'
-import { useConnectModal } from '@mysten/dapp-kit'
+import { useModal } from 'connectkit'
 import { Wallet, ChevronDown, LogOut, Copy, ExternalLink, Check } from 'lucide-react'
 import { Button } from '../ui/button'
 import { cn } from '@/lib/utils/cn'
@@ -12,8 +12,8 @@ import { Badge } from '../ui/badge'
 
 export function ConnectButton() {
   const { address, isConnected } = useConnection()
-  const disconnect = useDisconnect()
-  const { open } = useConnectModal()
+  const { mutate: disconnect } = useDisconnect()
+  const { setOpen } = useModal()
   const [showMenu, setShowMenu] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -33,7 +33,7 @@ export function ConnectButton() {
   if (!isConnected) {
     return (
       <Button
-        onClick={() => open()}
+        onClick={() => setOpen(true)}
         size="default"
         className="shadow-lg"
       >
@@ -58,7 +58,7 @@ export function ConnectButton() {
           <div className="flex flex-col items-start">
             <span className="text-xs text-gray-500 font-medium">Connected</span>
             <span className="text-sm font-semibold text-gray-900">
-              {shortenAddress(address)}
+              {address ? shortenAddress(address) : ''}
             </span>
           </div>
         </div>
@@ -84,7 +84,7 @@ export function ConnectButton() {
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-sm font-mono text-gray-900">
-                  {shortenAddress(address, 6)}
+                  {address ? shortenAddress(address, 6) : ''}
                 </span>
                 <button
                   onClick={handleCopy}
