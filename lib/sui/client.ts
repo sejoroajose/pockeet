@@ -58,9 +58,9 @@ function getGraphQLClient(network: SuiNetwork = 'testnet'): SuiGraphQLClient {
 }
 
 export function getKeypair(): Ed25519Keypair {
-  const privateKey = process.env.NEXT_PUBLIC_SUI_PRIVATE_KEY;
+  const privateKey = process.env.SUI_PRIVATE_KEY;
   if (!privateKey) {
-    throw new Error('NEXT_PUBLIC_SUI_PRIVATE_KEY is not set');
+    throw new Error('SUI_PRIVATE_KEY is not set');
   }
   const cleanKey = privateKey.replace(/^suiprivkey/, '');
   return Ed25519Keypair.fromSecretKey(fromBase64(cleanKey));
