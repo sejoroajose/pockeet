@@ -10,11 +10,11 @@
     "commit": "cz",
     "sui-build": "cd sui && sui move build",
     "test": "cd sui && sui move test",
-    "deploy": "ts-node scripts/deploy.ts",
-    "create-vault": "ts-node scripts/create-vault.ts",
-    "test:deposit": "ts-node scripts/test-deposit.ts",
-    "test:withdraw": "ts-node scripts/test-withdraw.ts",
-    "vault:info": "ts-node scripts/vault-info.ts",
+    "deploy": "tsx scripts/deploy.ts",
+    "create-vault": "tsx scripts/create-vault.ts",
+    "test:deposit": "tsx scripts/test-deposit.ts",
+    "test:withdraw": "tsx scripts/test-withdraw.ts",
+    "vault:info": "tsx scripts/vault-info.ts",
     "clean": "cd sui && rm -rf build",
     "release": "standard-version",
     "release:dry": "standard-version --dry-run"
@@ -33,6 +33,7 @@
     "connectkit": "^1.9.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.31.0",
+    "gsap": "^3.14.2",
     "init": "^0.1.2",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
@@ -54,6 +55,7 @@
     "eslint-config-next": "^16.1.6",
     "standard-version": "^9.5.0",
     "tailwindcss": "^4.1.18",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "config": {

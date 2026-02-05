@@ -13,7 +13,7 @@ export function initializeLiFi() {
   
   createConfig({
     integrator: process.env.NEXT_PUBLIC_LIFI_INTEGRATOR || 'pockeet',
-    apiKey: process.env.LIFI_API_KEY,
+    apiKey: process.env.NEXT_PUBLIC_LIFI_API_KEY,
   });
   
   isConfigured = true;
