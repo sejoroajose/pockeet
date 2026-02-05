@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
-import { Providers } from "@/lib/providers";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { ProvidersWrapper } from "@/components/ProvidersWrapper";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -38,7 +38,7 @@ export default function RootLayout({
         <link href="https://fonts.cdnfonts.com/css/coolvetica" rel="stylesheet" />
       </head>
       <body className={`${geist.variable} antialiased bg-gray-50 min-h-screen`}>
-        <Providers>
+        <ProvidersWrapper>
           <div className="flex flex-col min-h-screen">
             <Header />
             <main className="flex-1">
@@ -46,7 +46,7 @@ export default function RootLayout({
             </main>
             <Footer />
           </div>
-        </Providers>
+        </ProvidersWrapper>
       </body>
     </html>
   );
