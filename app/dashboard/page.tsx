@@ -4,11 +4,12 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useConnection } from 'wagmi'
 import { motion } from 'framer-motion'
-import { ArrowUpRight, TrendingUp, Wallet } from 'lucide-react'
+import { ArrowUpRight, TrendingUp, Wallet, Zap } from 'lucide-react'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { VaultBalance } from '@/components/vault/vault-balance'
 import { TransactionHistory } from '@/components/vault/transaction-history'
-import { ENSProfile } from '@/components/ens/ens-profile'
+import { ENSTreasuryController } from '@/components/ens/ens-treasury-controller'
+import { MultiChainBalanceDetector } from '@/components/balance/multi-chain-detector'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { PageLoader } from '@/components/ui/loading'
@@ -45,7 +46,7 @@ export default function DashboardPage() {
               Dashboard
             </h1>
             <p className="text-gray-600">
-              Welcome back! Here's your portfolio overview
+              Your unified USDC treasury across all chains
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -71,51 +72,81 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - 2/3 width */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Vault Balance */}
-            <VaultBalance vaultId={vaultId} />
+            {/* Multi-Chain Balance Detector - NEW! */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <MultiChainBalanceDetector />
+            </motion.div>
 
-            {/* Quick Actions */}
+            {/* Vault Balance */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <Card>
+              <VaultBalance vaultId={vaultId} />
+            </motion.div>
+
+            {/* How It Works */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50">
                 <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                  <CardDescription>Manage your vault</CardDescription>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Zap className="h-5 w-5 text-purple-600" />
+                    <span>How Pockeet Works</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Chain-abstracted USDC treasury powered by 4 protocols
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Link href="/deposit">
-                      <button className="w-full flex flex-col items-center justify-center p-6 rounded-xl border-2 border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all group">
-                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                          <ArrowUpRight className="h-6 w-6 text-purple-600" />
-                        </div>
-                        <span className="font-semibold text-gray-900">Deposit</span>
-                        <span className="text-sm text-gray-500 mt-1">Add USDC</span>
-                      </button>
-                    </Link>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="text-center p-4 rounded-xl bg-white border border-purple-200">
+                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 mx-auto mb-3 flex items-center justify-center text-white text-xl font-bold">
+                        1
+                      </div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Detect USDC</h4>
+                      <p className="text-xs text-gray-600">
+                        Find your USDC across 8+ chains
+                      </p>
+                    </div>
 
-                    <Link href="/vault">
-                      <button className="w-full flex flex-col items-center justify-center p-6 rounded-xl border-2 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all group">
-                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-100 to-green-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                          <Wallet className="h-6 w-6 text-emerald-600" />
-                        </div>
-                        <span className="font-semibold text-gray-900">Withdraw</span>
-                        <span className="text-sm text-gray-500 mt-1">Take out funds</span>
-                      </button>
-                    </Link>
+                    <div className="text-center p-4 rounded-xl bg-white border border-purple-200">
+                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 mx-auto mb-3 flex items-center justify-center text-white text-xl font-bold">
+                        2
+                      </div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Route via Arc</h4>
+                      <p className="text-xs text-gray-600">
+                        LI.FI bridges through Arc's USDC hub
+                      </p>
+                    </div>
 
-                    <Link href="/yield">
-                      <button className="w-full flex flex-col items-center justify-center p-6 rounded-xl border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all group">
-                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                          <TrendingUp className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <span className="font-semibold text-gray-900">Strategies</span>
-                        <span className="text-sm text-gray-500 mt-1">Optimize yield</span>
-                      </button>
-                    </Link>
+                    <div className="text-center p-4 rounded-xl bg-white border border-purple-200">
+                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-green-500 mx-auto mb-3 flex items-center justify-center text-white text-xl font-bold">
+                        3
+                      </div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Earn on Sui</h4>
+                      <p className="text-xs text-gray-600">
+                        Vault generates 5-30% APY
+                      </p>
+                    </div>
+
+                    <div className="text-center p-4 rounded-xl bg-white border border-purple-200">
+                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 mx-auto mb-3 flex items-center justify-center text-white text-xl font-bold">
+                        4
+                      </div>
+                      <h4 className="font-semibold text-gray-900 mb-1">ENS Control</h4>
+                      <p className="text-xs text-gray-600">
+                        Your ENS name manages settings
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -125,7 +156,7 @@ export default function DashboardPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
+              transition={{ delay: 0.4 }}
             >
               <TransactionHistory vaultId={vaultId} limit={10} />
             </motion.div>
@@ -133,13 +164,13 @@ export default function DashboardPage() {
 
           {/* Right Column - 1/3 width */}
           <div className="space-y-6">
-            {/* ENS Profile */}
+            {/* ENS Treasury Controller - NEW! */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <ENSProfile address={address} />
+              <ENSTreasuryController address={address} />
             </motion.div>
 
             {/* Portfolio Performance */}
@@ -204,10 +235,17 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Bridge Status</span>
+                    <span className="text-sm text-gray-600">LI.FI Bridges</span>
                     <span className="flex items-center space-x-2">
                       <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
                       <span className="text-sm font-medium text-emerald-700">Online</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">ENS Resolver</span>
+                    <span className="flex items-center space-x-2">
+                      <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
+                      <span className="text-sm font-medium text-emerald-700">Active</span>
                     </span>
                   </div>
                 </CardContent>
