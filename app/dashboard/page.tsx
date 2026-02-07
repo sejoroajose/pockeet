@@ -8,7 +8,6 @@ import { ArrowUpRight, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { VaultBalance } from '@/components/vault/vault-balance'
 import { TransactionHistory } from '@/components/vault/transaction-history'
-import { DynamicBalanceScanner } from '@/components/balance/dynamic-scanner'
 import { SimpleENSController } from '@/components/ens/simple-ens-controller'
 import { SUI_CONFIG } from '@/lib/utils/constants'
 
@@ -58,8 +57,6 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <VaultBalance vaultId={SUI_CONFIG.VAULT_OBJECT_ID} />
-
-          <DynamicBalanceScanner />
 
           <TransactionHistory vaultId={SUI_CONFIG.VAULT_OBJECT_ID} limit={5} />
         </div>

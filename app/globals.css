@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@import '@mysten/dapp-kit/dist/index.css';
+
 @layer base {
   :root {
     --background: #fafafa;

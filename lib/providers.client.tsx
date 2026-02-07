@@ -4,8 +4,8 @@ import { WagmiProvider, createConfig, http } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConnectKitProvider, getDefaultConfig } from 'connectkit';
 import { mainnet, sepolia, base, arbitrum, optimism, polygon } from 'wagmi/chains';
-import { createDAppKit, DAppKitProvider } from '@mysten/dapp-kit-react';
-import { SuiGrpcClient } from '@mysten/sui/grpc';
+import dynamic from 'next/dynamic';
+import { ReactNode } from 'react';
 
 export const arcTestnet = {
   id: 5042002,
@@ -50,37 +50,26 @@ const wagmiConfig = createConfig(
   })
 );
 
-const dAppKit = createDAppKit({
-  networks: ['testnet', 'mainnet'],
-  defaultNetwork: 'testnet',
-  createClient(network) {
-    return new SuiGrpcClient({
-      network,
-      baseUrl:
-        network === 'mainnet'
-          ? 'https://fullnode.mainnet.sui.io:443'
-          : 'https://fullnode.testnet.sui.io:443',
-    });
-  },
-});
-
-declare module '@mysten/dapp-kit-react' {
-  interface Register {
-    dAppKit: typeof dAppKit;
-  }
-}
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
+      staleTime: 1000 * 60 * 5, // 5 minutes
     },
   },
 });
 
+// Dynamically import Sui provider to avoid SSR issues
+const SuiProviderWrapper = dynamic(
+  () => import('./SuiProviderWrapper').then((mod) => mod.SuiProviderWrapper),
+  { 
+    ssr: false,
+    loading: () => null, // Return null while loading
+  }
+);
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
@@ -91,9 +80,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             enforceSupportedChains: false,
           }}
         >
-          <DAppKitProvider dAppKit={dAppKit}>
-            {children}
-          </DAppKitProvider>
+          <SuiProviderWrapper>{children}</SuiProviderWrapper>
         </ConnectKitProvider>
       </WagmiProvider>
     </QueryClientProvider>
