@@ -1,9 +1,13 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { bridgeArcToSui, estimateBridgeFee } from './cctp-arc-to-sui';
+import { useWalletClient } from 'wagmi';
+import { bridgeArcToSui } from './cctp-arc-to-sui';
+
+const ARC_TESTNET_CHAIN_ID = 5042002;
 
 export function useCCTPBridge() {
+  const { data: walletClient } = useWalletClient({ chainId: ARC_TESTNET_CHAIN_ID });
   const [executing, setExecuting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -16,6 +20,11 @@ export function useCCTPBridge() {
       return;
     }
 
+    if (!walletClient) {
+      setError('Wallet not connected');
+      return;
+    }
+
     setExecuting(true);
     setProgress(0);
     setError(null);
@@ -23,22 +32,28 @@ export function useCCTPBridge() {
     setTxHash(null);
 
     try {
-      // Hardcoded Sui recipient for demo
-      const suiRecipient = process.env.NEXT_PUBLIC_SUI_VAULT_ADDRESS || '0x...';
+      // Get Sui vault address from environment
+      const suiRecipient = process.env.NEXT_PUBLIC_VAULT_OBJECT_ID || 
+        '0x0000000000000000000000000000000000000000000000000000000000000000';
 
-      setProgress(25);
-      
-      const result = await bridgeArcToSui(amount, suiRecipient);
+      setProgress(10);
+      console.log('Starting CCTP bridge...');
+
+      // Call bridge function with wallet client
+      const result = await bridgeArcToSui(walletClient, amount, suiRecipient);
       
       setProgress(50);
       setTxHash(result.burnTxHash);
       
-      // Simulate waiting for attestation
+      console.log('Burn transaction confirmed:', result.burnTxHash);
+      
+      // Simulate progress while waiting for CCTP attestation
       setProgress(75);
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       setProgress(100);
       setSuccess(true);
+      console.log('Bridge complete!');
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Bridge failed';
       setError(errorMsg);
@@ -46,7 +61,7 @@ export function useCCTPBridge() {
     } finally {
       setExecuting(false);
     }
-  }, []);
+  }, [walletClient]);
 
   const reset = useCallback(() => {
     setExecuting(false);

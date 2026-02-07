@@ -1,14 +1,29 @@
-import { type Address, type Hash, parseUnits } from 'viem';
-import { arcPublicClient, createArcWalletClient, getUSDCAddress } from './client';
+import { type Address, type Hash, parseUnits, erc20Abi } from 'viem';
+import { arcPublicClient, getUSDCAddress } from './client';
+import type { WalletClient } from 'viem';
+import { arcTestnet } from './client';
 
 // CCTP Contract addresses on Arc
 const TOKEN_MESSENGER = (process.env.NEXT_PUBLIC_ARC_TOKEN_MESSENGER || 
   '0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5') as Address;
 
-const MESSAGE_TRANSMITTER = (process.env.NEXT_PUBLIC_ARC_MESSAGE_TRANSMITTER ||
-  '0x7865fAfC2db2093669d92c0F33AeEF291086BEFD') as Address;
-
 const SUI_DOMAIN = 8; 
+
+// CCTP TokenMessenger ABI
+const TOKEN_MESSENGER_ABI = [
+  {
+    name: 'depositForBurn',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'amount', type: 'uint256' },
+      { name: 'destinationDomain', type: 'uint32' },
+      { name: 'mintRecipient', type: 'bytes32' },
+      { name: 'burnToken', type: 'address' },
+    ],
+    outputs: [{ name: 'nonce', type: 'uint64' }],
+  },
+] as const;
 
 export interface BridgeResult {
   burnTxHash: Hash;
@@ -21,202 +36,80 @@ export interface BridgeResult {
  * Bridge USDC from Arc to Sui using Circle's CCTP
  */
 export async function bridgeArcToSui(
+  walletClient: WalletClient,
   amount: string,
   suiRecipient: string
 ): Promise<BridgeResult> {
-  const walletClient = createArcWalletClient();
+  if (!walletClient.account) {
+    throw new Error('No wallet account connected');
+  }
+
   const usdcAddress = getUSDCAddress();
-  const amountWei = parseUnits(amount, 6); // USDC has 6 decimals
-  
-  // Convert Sui address to bytes32 format
+  const amountWei = parseUnits(amount, 6);
   const recipientBytes32 = suiAddressToBytes32(suiRecipient);
   
   // 1. Approve TokenMessenger to spend USDC
-  console.log('Approving USDC spending...');
-  const approveTx = await walletClient.writeContract({
+  const { request } = await arcPublicClient.simulateContract({
     address: usdcAddress,
-    abi: [
-      {
-        name: 'approve',
-        type: 'function',
-        stateMutability: 'nonpayable',
-        inputs: [
-          { name: 'spender', type: 'address' },
-          { name: 'amount', type: 'uint256' },
-        ],
-        outputs: [{ name: '', type: 'bool' }],
-      },
-    ],
+    abi: erc20Abi,
     functionName: 'approve',
     args: [TOKEN_MESSENGER, amountWei],
+    account: walletClient.account!,   
+    chain: arcTestnet,
   });
+
+  const approveTx = await walletClient.writeContract(request);
   
   await arcPublicClient.waitForTransactionReceipt({ hash: approveTx });
   console.log('Approval confirmed:', approveTx);
   
-  // 2. Call depositForBurn on TokenMessenger
-  console.log('Burning USDC on Arc...');
-  const burnTx = await walletClient.writeContract({
+ const burnSimulation = await arcPublicClient.simulateContract({
     address: TOKEN_MESSENGER,
-    abi: [
-      {
-        name: 'depositForBurn',
-        type: 'function',
-        stateMutability: 'nonpayable',
-        inputs: [
-          { name: 'amount', type: 'uint256' },
-          { name: 'destinationDomain', type: 'uint32' },
-          { name: 'mintRecipient', type: 'bytes32' },
-          { name: 'burnToken', type: 'address' },
-        ],
-        outputs: [{ name: 'nonce', type: 'uint64' }],
-      },
-    ],
+    abi: TOKEN_MESSENGER_ABI,
     functionName: 'depositForBurn',
-    args: [amountWei, SUI_DOMAIN, recipientBytes32, usdcAddress],
+    args: [
+      amountWei,
+      SUI_DOMAIN,
+      recipientBytes32,
+      usdcAddress,
+    ],
+    account: walletClient.account,
+    chain: arcTestnet,
   });
+
+  console.log('Simulate burn successful. Sending real burn tx...');
+
+  const burnTxHash = await walletClient.writeContract(burnSimulation.request);
   
-  await arcPublicClient.waitForTransactionReceipt({ hash: burnTx });
-  console.log('Burn confirmed:', burnTx);
+  await arcPublicClient.waitForTransactionReceipt({ hash: burnTxHash });
+  console.log('Burn confirmed:', burnTxHash);
   
   return {
-    burnTxHash: burnTx,
+    burnTxHash: burnTxHash,
     amount,
     recipient: suiRecipient,
   };
 }
 
-/**
- * Get attestation for a burn transaction
- * This would typically be called by a backend service or after some delay
- */
-export async function getAttestation(
-  burnTxHash: Hash
-): Promise<string | null> {
-  try {
-    // Get the transaction receipt
-    const receipt = await arcPublicClient.getTransactionReceipt({
-      hash: burnTxHash,
-    });
-    
-    // Extract MessageSent event
-    const messageSentEvent = receipt.logs.find(
-      log => log.address.toLowerCase() === MESSAGE_TRANSMITTER.toLowerCase()
-    );
-    
-    if (!messageSentEvent) {
-      throw new Error('MessageSent event not found');
-    }
-    
-    // In production, you would call Circle's Attestation API
-    // https://iris-api.circle.com/attestations/{messageHash}
-    const messageHash = messageSentEvent.topics[1];
-    
-    if (!messageHash) {
-      throw new Error('Message hash not found in event topics');
-    }
-    
-    // Poll Circle's API for attestation
-    const attestation = await pollForAttestation(messageHash);
-    
-    return attestation;
-  } catch (error) {
-    console.error('Failed to get attestation:', error);
-    return null;
-  }
-}
-
-/**
- * Poll Circle's Attestation API
- */
-async function pollForAttestation(
-  messageHash: string,
-  maxAttempts: number = 20,
-  delayMs: number = 3000
-): Promise<string | null> {
-  const baseUrl = 'https://iris-api-sandbox.circle.com'; // Use production URL for mainnet
-  
-  for (let i = 0; i < maxAttempts; i++) {
-    try {
-      const response = await fetch(
-        `${baseUrl}/attestations/${messageHash}`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.status === 'complete') {
-          return data.attestation;
-        }
-      }
-      
-      // Wait before next attempt
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    } catch (error) {
-      console.error('Attestation poll error:', error);
-    }
-  }
-  
-  return null;
-}
-
-/**
- * Convert Sui address to bytes32 format for CCTP
- */
 function suiAddressToBytes32(suiAddress: string): `0x${string}` {
-  // Remove '0x' prefix if present
   const cleanAddress = suiAddress.replace('0x', '');
-  
-  // Sui addresses are 32 bytes, pad if needed
   const paddedAddress = cleanAddress.padStart(64, '0');
-  
   return `0x${paddedAddress}`;
 }
 
-/**
- * Get bridge fee estimate
- */
 export async function estimateBridgeFee(amount: string): Promise<{
   gasEstimate: string;
   bridgeFee: string;
   total: string;
 }> {
-  // CCTP has no protocol fee, only gas
-  const gasEstimate = '0.001'; // Estimated in ETH
-  const bridgeFee = '0.00'; // CCTP is feeless
-  
   return {
-    gasEstimate,
-    bridgeFee,
-    total: gasEstimate,
+    gasEstimate: '0.001',
+    bridgeFee: '0.00',
+    total: '0.001',
   };
-}
-
-/**
- * Check if bridge transaction is complete
- */
-export async function checkBridgeStatus(burnTxHash: Hash): Promise<{
-  status: 'pending' | 'attested' | 'complete' | 'failed';
-  attestation?: string;
-}> {
-  try {
-    const attestation = await getAttestation(burnTxHash);
-    
-    if (attestation) {
-      return {
-        status: 'attested',
-        attestation,
-      };
-    }
-    
-    return { status: 'pending' };
-  } catch (error) {
-    return { status: 'failed' };
-  }
 }
 
 export default {
   bridgeArcToSui,
-  getAttestation,
   estimateBridgeFee,
-  checkBridgeStatus,
 };
