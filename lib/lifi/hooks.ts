@@ -12,6 +12,7 @@ export interface UseLiFiBridgeOptions {
   fromChainId: number;
   toChainId: number;
   tokenAddress: string;
+  amount?: string; 
   order?: 'CHEAPEST' | 'FASTEST';
 }
 
@@ -20,9 +21,8 @@ export interface UseLiFiBridgeOptions {
  */
 export function useLiFiBridge(options: UseLiFiBridgeOptions) {
   const { address } = useConnection();
-  const { fromChainId, toChainId, tokenAddress, order = 'CHEAPEST' } = options;
+  const { fromChainId, toChainId, tokenAddress, amount = '', order = 'CHEAPEST' } = options;
   
-  const [amount, setAmount] = useState('');
   const [routes, setRoutes] = useState<Route[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
   const [loading, setLoading] = useState(false);
@@ -36,20 +36,21 @@ export function useLiFiBridge(options: UseLiFiBridgeOptions) {
   const { mutateAsync: switchChainWagmi } = useSwitchChain();
 
   const switchChain = useCallback(
-  async ({ chainId }: { chainId: number }) => {
-    if (!switchChainWagmi) {
-      throw new Error('Chain switching is not supported by your wallet');
-    }
-    await switchChainWagmi({ chainId });
-  },
-  [switchChainWagmi]
-);
+    async ({ chainId }: { chainId: number }) => {
+      if (!switchChainWagmi) {
+        throw new Error('Chain switching is not supported by your wallet');
+      }
+      await switchChainWagmi({ chainId });
+    },
+    [switchChainWagmi]
+  );
 
   // Auto-find routes when amount changes
   useEffect(() => {
-    if (!amount || !address || parseFloat(amount) <= 0) {
+    if (!amount || !address || parseFloat(amount) <= 0 || !tokenAddress) {
       setRoutes([]);
       setSelectedRoute(null);
+      setLoading(false);
       return;
     }
     
@@ -75,9 +76,15 @@ export function useLiFiBridge(options: UseLiFiBridgeOptions) {
         
         if (foundRoutes.length > 0) {
           setSelectedRoute(foundRoutes[0]); 
+        } else {
+          setSelectedRoute(null);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to find routes');
+        const errorMsg = err instanceof Error ? err.message : 'Failed to find routes';
+        setError(errorMsg);
+        setRoutes([]);
+        setSelectedRoute(null);
+        console.error('Route finding error:', err);
       } finally {
         setLoading(false);
       }
@@ -88,7 +95,7 @@ export function useLiFiBridge(options: UseLiFiBridgeOptions) {
 
   const execute = useCallback(async () => {
     if (!selectedRoute) {
-      throw new Error('No route selected');
+      throw new Error('No route selected. Please enter an amount and wait for route to load.');
     }
 
     setExecuting(true);
@@ -102,7 +109,6 @@ export function useLiFiBridge(options: UseLiFiBridgeOptions) {
         {
           wagmiConfig,
           switchChain, 
-          // maxSlippageChange: 5, // optional
         },
         {
           onStepUpdate: (updatedRoute) => {
@@ -133,10 +139,8 @@ export function useLiFiBridge(options: UseLiFiBridgeOptions) {
     }
   }, [selectedRoute, wagmiConfig, switchChain]); 
 
-
   // Reset all state
   const reset = useCallback(() => {
-    setAmount('');
     setRoutes([]);
     setSelectedRoute(null);
     setError(null);
@@ -146,10 +150,6 @@ export function useLiFiBridge(options: UseLiFiBridgeOptions) {
   }, []);
 
   return {
-    // Input
-    amount,
-    setAmount,
-    
     // Routes
     routes,
     selectedRoute,
@@ -225,6 +225,7 @@ export function useBridgeStatus(txHash: string | null) {
       clearInterval(interval);
     };
   }, [txHash, status?.status]);
+  
   return { status, loading };
 }
 

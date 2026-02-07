@@ -65,7 +65,9 @@ export function useENS(addressOrName?: string) {
           setAvatar(avatarUrl);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Resolution failed');
+        const errorMessage = err instanceof Error ? err.message : 'Resolution failed';
+        console.error('ENS resolution error:', errorMessage);
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -115,7 +117,9 @@ export function useTreasurySettings(ensName?: string) {
         setHasTreasuryConfig(treasuryExists);
         setSettings(treasurySettings);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch settings');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch settings';
+        console.error('Treasury settings error:', errorMessage);
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -198,7 +202,9 @@ export function useENSLookup() {
         });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Lookup failed');
+      const errorMessage = err instanceof Error ? err.message : 'Lookup failed';
+      console.error('ENS lookup error:', errorMessage);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

@@ -5,8 +5,16 @@ import type { Address } from 'viem';
  * Format USDC amount (6 decimals)
  */
 export function formatUSDC(amount: bigint | string, decimals: number = 6): string {
-  const value = typeof amount === 'string' ? BigInt(amount) : amount;
-  return formatUnits(value, decimals);
+  if (typeof amount === 'string') {
+    // If string contains decimal point, it's already formatted - return as is
+    if (amount.includes('.')) {
+      return parseFloat(amount).toFixed(2);
+    }
+    // Otherwise convert to bigint (raw wei amount)
+    const value = BigInt(amount);
+    return formatUnits(value, decimals);
+  }
+  return formatUnits(amount, decimals);
 }
 
 /**

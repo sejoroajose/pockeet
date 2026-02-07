@@ -1,338 +1,280 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useConnection } from 'wagmi'
-import { motion } from 'framer-motion'
-import { ArrowUpRight, Loader2, CheckCircle2, Info } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { PageLoader } from '@/components/ui/loading'
-import { useLiFiBridge } from '@/lib/lifi/hooks'
-import { getUSDCAddress, CHAIN_METADATA } from '@/lib/lifi/constants'
-import { calculateRouteFees, estimateRouteDuration } from '@/lib/lifi/client'
-import { formatUSDCWithSign } from '@/lib/utils/formatters'
-import { cn } from '@/lib/utils/cn'
-import { ArcRouteVisualizer } from '@/components/routing/arc-route-visualizer'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useConnection, useReadContract } from 'wagmi';
+import { ArrowLeft, Loader2, Wallet } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { useLiFiBridge } from '@/lib/lifi/hooks';
+import { ArcRouteDisplay } from '@/components/routing/arc-route-simple';
+import { getChainsWithBalance, type ChainWithBalance } from '@/lib/lifi/chains-with-balance';
+import { formatUnits } from 'viem';
 
-const SUPPORTED_CHAINS = [
-  { id: 1, name: 'Ethereum', fee: '$5-20', time: '15 min', color: '#627EEA' },
-  { id: 8453, name: 'Base', fee: '$0.10', time: '2 min', color: '#0052FF' },
-  { id: 42161, name: 'Arbitrum', fee: '$0.50', time: '10 min', color: '#28A0F0' },
-  { id: 10, name: 'Optimism', fee: '$0.50', time: '10 min', color: '#FF0420' },
-  { id: 137, name: 'Polygon', fee: '$0.10', time: '5 min', color: '#8247E5' },
-  { id: 43114, name: 'Avalanche', fee: '$0.30', time: '8 min', color: '#E84142' },
-  { id: 56, name: 'BSC', fee: '$0.20', time: '6 min', color: '#F3BA2F' },
-  { id: 324, name: 'zkSync Era', fee: '$0.15', time: '7 min', color: '#8C8DFC' },
-]
+const ERC20_ABI = [
+  {
+    inputs: [{ name: 'account', type: 'address' }],
+    name: 'balanceOf',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+] as const;
 
 export default function DepositPage() {
-  const { address, isConnected } = useConnection()
-  const router = useRouter()
-  const [fromChainId, setFromChainId] = useState(8453) // Default to Base
-  const [amount, setAmount] = useState('')
-  
-  const {
-    routes,
-    selectedRoute,
-    loading: findingRoutes,
-    execute,
-    executing,
-    progress,
-    currentStep,
-    txHash,
-    error,
-    reset,
-  } = useLiFiBridge({
-    fromChainId,
-    toChainId: 5042002, // Arc testnet
-    tokenAddress: getUSDCAddress(fromChainId),
-    order: 'CHEAPEST',
-  })
+  const { address, isConnected } = useConnection();
+  const router = useRouter();
+  const [fromChainId, setFromChainId] = useState(0);
+  const [amount, setAmount] = useState('');
+  const [chains, setChains] = useState<ChainWithBalance[]>([]);
+  const [chainsLoading, setChainsLoading] = useState(true);
 
   useEffect(() => {
     if (!isConnected) {
-      router.push('/')
+      router.push('/');
     }
-  }, [isConnected, router])
+  }, [isConnected, router]);
 
-  const handleAmountChange = (value: string) => {
-    const cleaned = value.replace(/[^\d.]/g, '')
-    const parts = cleaned.split('.')
-    if (parts.length > 2) return
-    if (parts[1] && parts[1].length > 6) return
-    setAmount(cleaned)
-  }
-
-  const handleDeposit = async () => {
-    if (!amount || !selectedRoute) return
-    try {
-      await execute()
-    } catch (err) {
-      console.error('Deposit failed:', err)
+  useEffect(() => {
+    async function loadChains() {
+      if (!address) return;
+      setChainsLoading(true);
+      const result = await getChainsWithBalance(address);
+      setChains(result);
+      if (result.length > 0 && fromChainId === 0) {
+        setFromChainId(result[0].id);
+      }
+      setChainsLoading(false);
     }
+    loadChains();
+  }, [address]);
+
+  const selectedChain = chains.find((c) => c.id === fromChainId);
+
+  const { data: balanceData, isLoading: balanceLoading } = useReadContract({
+    address: selectedChain?.usdc as `0x${string}`,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    chainId: fromChainId,
+    query: { enabled: !!address && !!selectedChain },
+  });
+
+  const balance = balanceData ? formatUnits(balanceData, 6) : '0';
+  const balanceNum = parseFloat(balance);
+  const amountNum = parseFloat(amount || '0');
+
+  const { selectedRoute, loading: findingRoutes, execute, executing, progress, error } = useLiFiBridge({
+    fromChainId,
+    toChainId: 5042002,
+    tokenAddress: selectedChain?.usdc || '',
+    amount,
+    order: 'CHEAPEST',
+  });
+
+  if (!isConnected) return null;
+
+  if (chainsLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+          <p className="text-gray-600">Scanning chains for USDC...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (!isConnected) {
-    return <PageLoader />
+  if (chains.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-md mx-auto text-center">
+          <h1 className="text-2xl font-bold mb-4">No USDC Found</h1>
+          <p className="text-gray-600 mb-6">
+            You don't have USDC on any supported chains. Get USDC from an exchange or faucet to get started.
+          </p>
+          <Link href="/dashboard">
+            <Button>Back to Dashboard</Button>
+          </Link>
+        </div>
+      </div>
+    );
   }
 
-  const selectedChain = SUPPORTED_CHAINS.find(c => c.id === fromChainId)
+  const zkChains = chains.filter((c) => c.type === 'ZK');
+  const l2Chains = chains.filter((c) => c.type === 'L2');
+
+  const isDepositValid =
+    amount && amountNum > 0 && amountNum <= balanceNum && selectedRoute && !executing && !findingRoutes;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50/30 to-blue-50/30">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="flex items-center space-x-2 mb-2">
-            <ArrowUpRight className="h-8 w-8 text-purple-600" />
-            <h1 className="font-coolvetica text-4xl font-bold gradient-text">
-              Deposit USDC
-            </h1>
-          </div>
-          <p className="text-gray-600 text-lg">
-            Deposit from {SUPPORTED_CHAINS.length}+ chains → Arc Hub → Sui Vault
-          </p>
-        </motion.div>
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="mb-8">
+        <Link href="/dashboard">
+          <Button variant="ghost" size="sm" className="mb-4">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </Link>
+        <h1 className="text-3xl font-bold text-gray-900">Deposit USDC</h1>
+        <p className="text-gray-600 mt-1">
+          Deposit from {chains.length} chains with USDC ({zkChains.length} ZK, {l2Chains.length} L2)
+        </p>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* Left Column - Form (3/5) */}
-          <div className="lg:col-span-3 space-y-6">
-            <Card className="border-2 border-purple-200">
-              <CardHeader>
-                <CardTitle>Select Chain & Amount</CardTitle>
-                <CardDescription>
-                  Choose your source chain and enter USDC amount
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Chain Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Select Source Chain</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {zkChains.length > 0 && (
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-3 block">
-                    From Chain ({SUPPORTED_CHAINS.length} supported)
-                  </label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {SUPPORTED_CHAINS.map((chain) => (
-                      <motion.button
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Badge variant="default" className="text-xs">
+                      ZK Rollups
+                    </Badge>
+                    <span className="text-xs text-gray-600">{zkChains.length} chains</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {zkChains.map((chain) => (
+                      <button
                         key={chain.id}
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
                         onClick={() => setFromChainId(chain.id)}
-                        className={cn(
-                          'flex flex-col items-start p-3 rounded-xl border-2 transition-all',
+                        className={`p-3 text-sm font-medium rounded-lg border-2 transition-colors text-left ${
                           fromChainId === chain.id
-                            ? 'border-purple-500 bg-gradient-to-r from-purple-50 to-blue-50 shadow-lg'
-                            : 'border-gray-200 hover:border-purple-200 hover:bg-gray-50'
-                        )}
+                            ? 'border-purple-500 bg-purple-50 text-purple-700'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
                       >
-                        <div className="flex items-center justify-between w-full mb-2">
-                          <div 
-                            className="h-8 w-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
-                            style={{ backgroundColor: chain.color }}
-                          >
-                            {chain.name[0]}
-                          </div>
-                          {fromChainId === chain.id && (
-                            <CheckCircle2 className="h-5 w-5 text-purple-600" />
-                          )}
-                        </div>
-                        <p className="font-semibold text-gray-900 text-sm">{chain.name}</p>
-                        <div className="flex items-center space-x-1 text-xs text-gray-600 mt-1">
-                          <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                            {chain.fee}
-                          </Badge>
-                          <span>•</span>
-                          <span>{chain.time}</span>
-                        </div>
-                      </motion.button>
+                        <div className="font-semibold">{chain.name}</div>
+                        <div className="text-xs text-gray-500 mt-1">{parseFloat(chain.balance).toFixed(2)} USDC</div>
+                      </button>
                     ))}
                   </div>
                 </div>
+              )}
 
-                {/* Amount Input */}
+              {l2Chains.length > 0 && (
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">
-                    Amount (USDC)
-                  </label>
-                  <div className="relative">
-                    <Input
-                      type="text"
-                      placeholder="0.00"
-                      value={amount}
-                      onChange={(e) => handleAmountChange(e.target.value)}
-                      className="text-3xl font-bold pr-24 h-16"
-                      disabled={executing}
-                    />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">
-                      USDC
-                    </div>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Badge variant="secondary" className="text-xs">
+                      L2 Chains
+                    </Badge>
+                    <span className="text-xs text-gray-600">{l2Chains.length} chains</span>
                   </div>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Min: $1.00 • Max: $1,000,000
-                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {l2Chains.map((chain) => (
+                      <button
+                        key={chain.id}
+                        onClick={() => setFromChainId(chain.id)}
+                        className={`p-3 text-sm font-medium rounded-lg border-2 transition-colors text-left ${
+                          fromChainId === chain.id
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="font-semibold">{chain.name}</div>
+                        <div className="text-xs text-gray-500 mt-1">{parseFloat(chain.balance).toFixed(2)} USDC</div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
+              )}
+            </CardContent>
+          </Card>
 
-                {/* Route Summary */}
-                {selectedRoute && amount && !executing && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-4 rounded-xl bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="font-semibold text-gray-900">Best Route Found</span>
-                      <Badge variant="success">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Lowest Fee
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-3 gap-3 text-sm">
-                      <div>
-                        <p className="text-gray-600 text-xs mb-1">Total Fee</p>
-                        <p className="font-bold text-purple-700">
-                          ${calculateRouteFees(selectedRoute).total}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600 text-xs mb-1">Est. Time</p>
-                        <p className="font-bold text-purple-700">
-                          ~{estimateRouteDuration(selectedRoute)} min
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600 text-xs mb-1">You Receive</p>
-                        <p className="font-bold text-emerald-700">
-                          ~{formatUSDCWithSign(selectedRoute.steps[selectedRoute.steps.length - 1].estimate.toAmount)}
-                        </p>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Execution Progress */}
-                {executing && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-4 rounded-xl bg-blue-50 border-2 border-blue-200"
-                  >
-                    <div className="flex items-center space-x-3 mb-3">
-                      <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-                      <div>
-                        <p className="font-semibold text-blue-900">
-                          {currentStep || 'Processing transaction...'}
-                        </p>
-                        <p className="text-sm text-blue-700">{progress}% complete</p>
-                      </div>
-                    </div>
-                    <div className="w-full bg-white rounded-full h-3 overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ duration: 0.3 }}
-                        className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
-                      />
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Error */}
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-4 rounded-xl bg-red-50 border-2 border-red-200"
-                  >
-                    <p className="text-sm text-red-700 font-medium">{error}</p>
-                  </motion.div>
-                )}
-
-                {/* Deposit Button */}
-                <Button
-                  onClick={handleDeposit}
-                  disabled={!amount || !selectedRoute || executing || findingRoutes || parseFloat(amount) < 1}
-                  loading={executing || findingRoutes}
-                  size="lg"
-                  className="w-full h-14 text-lg"
-                >
-                  {executing ? (
-                    `Depositing... ${progress}%`
-                  ) : findingRoutes ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Finding Best Route...
-                    </>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Amount</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <Wallet className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-600">Balance:</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {balanceLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
                   ) : (
                     <>
-                      Deposit {amount || '0'} USDC
-                      <ArrowUpRight className="ml-2 h-6 w-6" />
+                      <span className="font-semibold text-gray-900">{parseFloat(balance).toFixed(2)} USDC</span>
+                      {balanceNum > 0 && (
+                        <Button variant="ghost" size="sm" onClick={() => setAmount(balance)} className="h-6 px-2 text-xs">
+                          MAX
+                        </Button>
+                      )}
                     </>
                   )}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+                </div>
+              </div>
 
-          {/* Right Column - Info (2/5) */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Arc Route Visualization */}
-            {selectedRoute && amount && selectedChain && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <ArcRouteVisualizer
-                  fromChain={selectedChain.name}
-                  amount={amount}
-                  estimatedTime={estimateRouteDuration(selectedRoute)}
-                  fees={{
-                    bridge: calculateRouteFees(selectedRoute).feeCosts,
-                    arc: '0.10',
-                    total: calculateRouteFees(selectedRoute).total,
-                  }}
-                />
-              </motion.div>
-            )}
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="text-lg"
+                disabled={executing || balanceLoading}
+                max={balance}
+                step="0.01"
+              />
 
-            {/* Info Box */}
-            {!amount && (
-              <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Info className="h-5 w-5 text-blue-600" />
-                    <span>How It Works</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm text-gray-700">
-                  <div className="flex items-start space-x-2">
-                    <span className="font-bold text-purple-700">1.</span>
-                    <p>Select your source chain and enter USDC amount</p>
+              {findingRoutes && amount && amountNum > 0 && (
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                    <span className="text-sm text-blue-700">Finding route...</span>
                   </div>
-                  <div className="flex items-start space-x-2">
-                    <span className="font-bold text-purple-700">2.</span>
-                    <p>LI.FI finds the best bridge route to Arc Network</p>
+                </div>
+              )}
+
+              {executing && (
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                    <span className="text-sm font-medium text-blue-900">Processing...</span>
                   </div>
-                  <div className="flex items-start space-x-2">
-                    <span className="font-bold text-purple-700">3.</span>
-                    <p>Arc mints native USDC via Circle CCTP</p>
+                  <div className="w-full bg-white rounded-full h-2">
+                    <div className="bg-blue-600 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
                   </div>
-                  <div className="flex items-start space-x-2">
-                    <span className="font-bold text-purple-700">4.</span>
-                    <p>Funds deposited to your Sui vault - start earning!</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="p-3 bg-red-50 rounded-lg">
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              )}
+
+              <Button onClick={execute} disabled={!isDepositValid} className="w-full" size="lg">
+                {executing
+                  ? `Depositing... ${progress}%`
+                  : findingRoutes
+                  ? 'Finding Route...'
+                  : !amount
+                  ? 'Enter Amount'
+                  : amountNum > balanceNum
+                  ? 'Insufficient Balance'
+                  : !selectedRoute
+                  ? 'Waiting for Route...'
+                  : `Deposit ${amount} USDC`}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div>
+          {selectedChain && amount && parseFloat(amount) > 0 && (
+            <ArcRouteDisplay fromChain={selectedChain.name} amount={amount} />
+          )}
         </div>
       </div>
     </div>
-  )
+  );
 }

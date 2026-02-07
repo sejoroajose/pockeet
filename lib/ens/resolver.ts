@@ -8,10 +8,19 @@ import type { Address } from 'viem';
 // Select network based on environment
 const chain = process.env.NEXT_PUBLIC_ENS_NETWORK === 'mainnet' ? mainnet : sepolia;
 
-// Create public client
+// Use reliable public RPC endpoints
+const rpcUrl = chain.id === 1 
+  ? 'https://eth.llamarpc.com' // Mainnet - fast and reliable
+  : 'https://rpc.sepolia.org'; // Sepolia testnet
+
+// Create public client with fallback and retry logic
 export const ensPublicClient = createPublicClient({
   chain,
-  transport: http(),
+  transport: http(rpcUrl, {
+    timeout: 10_000, // 10 second timeout
+    retryCount: 3,
+    retryDelay: 1000,
+  }),
 });
 
 /**

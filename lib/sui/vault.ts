@@ -1,4 +1,4 @@
-import { getSuiClient, executeTransaction, getVaultBalance, formatUSDCAmount, queryEvents } from './client';
+import { getSuiClient, executeTransaction, getVaultBalance, formatUSDCAmount } from './client';
 import { buildDepositTx, buildWithdrawTx } from './ptb';
 import type { SuiNetwork } from './client';
 
@@ -22,62 +22,9 @@ export interface WithdrawResult {
   newBalance: string;
 }
 
-// BCS event decoding
-
-function hexToBytes(hex: string): Uint8Array {
-  const clean = hex.replace(/^0x/, '');
-  const bytes = new Uint8Array(clean.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(clean.substring(i * 2, i * 2 + 2), 16);
-  }
-  return bytes;
-}
-
-function bytesToHex(bytes: Uint8Array): string {
-  return '0x' + Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-function readU64LE(bytes: Uint8Array, offset: number): string {
-  let value = 0n;
-  for (let i = 0; i < 8; i++) {
-    value |= BigInt(bytes[offset + i]) << BigInt(i * 8);
-  }
-  return value.toString();
-}
-
 /** Normalize any Sui address/ID to a full zero-padded 0x-prefixed hex string. */
 function normalizeAddress(addr: string): string {
   return '0x' + addr.replace(/^0x/, '').padStart(64, '0');
-}
-
-interface DecodedVaultEvent {
-  vaultId: string; // 0x-prefixed, full 32 bytes
-  user: string;    // 0x-prefixed, full 32 bytes
-  amount: string;  // raw u64 as decimal string
-}
-
-function decodeVaultEvent(bcsHex: string): DecodedVaultEvent {
-  const bytes = hexToBytes(bcsHex);
-  return {
-    vaultId: bytesToHex(bytes.slice(0, 32)),  // ID      = 32 bytes
-    user:    bytesToHex(bytes.slice(32, 64)), // address = 32 bytes
-    amount:  readU64LE(bytes, 64),            // u64 LE  =  8 bytes
-  };
-}
-
-// GraphQL response types — match the query in client.ts queryEvents
-interface EventNode {
-  transactionModule: { package: { address: string }; name: string };
-  sender: { address: string };
-  transaction?: { digest: string };
-  contents: { type: { repr: string }; bcs: string };
-}
-
-interface QueryEventsResponse {
-  events: {
-    pageInfo: { hasNextPage: boolean; endCursor: string | null };
-    nodes: EventNode[];
-  };
 }
 
 // Vault reads
@@ -143,9 +90,6 @@ export async function getTVL(
   }
 }
 
-// 2.0: GetObjectResponse is { object: Object<Include> } — it doesn't have a
-// nullable .data wrapper. If the object doesn't exist the call throws, so the
-// try/catch is all we need.
 export async function vaultExists(
   vaultId: string,
   network: SuiNetwork = 'testnet'
@@ -159,9 +103,6 @@ export async function vaultExists(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Vault writes
-// ---------------------------------------------------------------------------
 
 export async function depositToVault(
   vaultId: string,
@@ -208,9 +149,6 @@ export async function withdrawFromVault(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Event queries — GraphQL only (no gRPC equivalent per migration docs)
-// ---------------------------------------------------------------------------
 
 export async function getVaultTransactions(
   vaultId: string,
@@ -218,71 +156,16 @@ export async function getVaultTransactions(
   network: SuiNetwork = 'testnet',
   limit: number = 20
 ) {
-  const packageId      = process.env.NEXT_PUBLIC_PACKAGE_ID!;
-  const normalizedVault = normalizeAddress(vaultId);
-  const normalizedUser  = normalizeAddress(userAddress);
-
-  try {
-    // queryEvents wraps GraphQL internally. Fire both event types in parallel.
-    const [depositResult, withdrawResult] = await Promise.all([
-      queryEvents({ MoveEventType: `${packageId}::vault::DepositEvent` },  network, limit),
-      queryEvents({ MoveEventType: `${packageId}::vault::WithdrawEvent` }, network, limit),
-    ]);
-
-    const deposits    = (depositResult  as QueryEventsResponse).events?.nodes ?? [];
-    const withdrawals = (withdrawResult as QueryEventsResponse).events?.nodes ?? [];
-
-    // Decode BCS event contents and flatten into a single list.
-    const allEvents = [
-      ...deposits.map((node) => ({
-        type: 'deposit' as const,
-        ...decodeVaultEvent(node.contents.bcs),
-        txDigest: node.transaction?.digest ?? null,
-      })),
-      ...withdrawals.map((node) => ({
-        type: 'withdraw' as const,
-        ...decodeVaultEvent(node.contents.bcs),
-        txDigest: node.transaction?.digest ?? null,
-      })),
-    ];
-
-    // Filter to this vault + user, cap at limit.
-    return allEvents
-      .filter(
-        (e) =>
-          normalizeAddress(e.vaultId) === normalizedVault &&
-          normalizeAddress(e.user)    === normalizedUser
-      )
-      .slice(0, limit);
-  } catch (error) {
-    console.error('Error fetching transactions:', error);
-    return [];
-  }
+  console.warn('Vault transaction queries disabled due to GraphQL issues');
+  return [];
 }
 
 export async function getUserDepositCount(
   userAddress: string,
   network: SuiNetwork = 'testnet'
 ): Promise<number> {
-  const packageId      = process.env.NEXT_PUBLIC_PACKAGE_ID!;
-  const normalizedUser = normalizeAddress(userAddress);
-
-  try {
-    const result = await queryEvents(
-      { MoveEventType: `${packageId}::vault::DepositEvent` },
-      network,
-      1000
-    );
-
-    const nodes = (result as QueryEventsResponse).events?.nodes ?? [];
-
-    return nodes.filter((node) => {
-      const { user } = decodeVaultEvent(node.contents.bcs);
-      return normalizeAddress(user) === normalizedUser;
-    }).length;
-  } catch {
-    return 0;
-  }
+  // GraphQL queries are failing - return 0 for now
+  return 0;
 }
 
 export default {
