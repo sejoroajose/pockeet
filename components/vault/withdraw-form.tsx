@@ -1,210 +1,226 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { ArrowDownToLine, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
-import { useAccount } from 'wagmi'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
-import { Button } from '../ui/button'
-import { Input } from '../ui/input'
-import { Badge } from '../ui/badge'
-import { useVaultWithdraw, useVaultInfo } from '@/lib/sui/hooks'
-import { formatUSDCWithSign, formatAmountInput } from '@/lib/utils/formatters'
+import { useState } from 'react';
+import { useConnection } from 'wagmi';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, ArrowDownToLine, CheckCircle2 } from 'lucide-react';
+import { ChainSelector } from '@/components/cctp/chain-selector';
+import { CCTP_CHAINS, type CCTPChainConfig } from '@/lib/arc/chains';
 
-interface WithdrawFormProps {
-  vaultId?: string
-}
-
-export function WithdrawForm({ vaultId }: WithdrawFormProps) {
-  const { address, isConnected } = useAccount()
-  const [amount, setAmount] = useState('')
-  const { info } = useVaultInfo(vaultId)
-  const { withdraw, withdrawing, error, txDigest, reset } = useVaultWithdraw(vaultId)
-
-  const handleAmountChange = (value: string) => {
-    const cleaned = formatAmountInput(value, 6)
-    setAmount(cleaned)
-  }
-
-  const handleMaxClick = () => {
-    if (info?.userBalance) {
-      setAmount(info.userBalance)
-    }
-  }
+export function WithdrawForm({ vaultId }: { vaultId: string }) {
+  const [amount, setAmount] = useState('');
+  const [bridgeBack, setBridgeBack] = useState(false);
+  const [targetChain, setTargetChain] = useState<CCTPChainConfig>(CCTP_CHAINS.sepolia);
+  const { address: evmAddress } = useConnection();
+  
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [txDigest, setTxDigest] = useState<string | null>(null);
+  const [bridgeTxHash, setBridgeTxHash] = useState<string | null>(null);
 
   const handleWithdraw = async () => {
-    if (!amount || !vaultId) return
+    if (!amount || parseFloat(amount) <= 0 || !evmAddress) return;
     
+    setWithdrawing(true);
+    setError(null);
+    setTxDigest(null);
+    setBridgeTxHash(null);
+
     try {
-      // Convert to raw USDC units (6 decimals)
-      const rawAmount = (parseFloat(amount) * 1_000_000).toString()
-      await withdraw(rawAmount)
-      setAmount('')
+      const amountInMist = (parseFloat(amount) * 1_000_000_000).toString();
+      
+      // Call relayer withdrawal API
+      const response = await fetch('/api/withdraw-and-bridge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ownerAddress: evmAddress,           
+          amount: amountInMist,
+          recipientAddress: evmAddress,       
+          destinationChainId: bridgeBack ? targetChain.chain.id : null,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setTxDigest(result.withdrawTxHash || result.txDigest);
+        
+        if (bridgeBack && result.bridgeTxHash) {
+          setBridgeTxHash(result.bridgeTxHash);
+        }
+        
+        setAmount('');
+      } else {
+        setError(result.error || 'Withdrawal failed');
+      }
     } catch (err) {
-      console.error('Withdraw failed:', err)
+      console.error('Withdraw failed:', err);
+      setError(err instanceof Error ? err.message : 'Withdrawal failed');
+    } finally {
+      setWithdrawing(false);
     }
-  }
+  };
 
-  const availableBalance = parseFloat(info?.userBalance || '0')
-  const withdrawAmount = parseFloat(amount || '0')
-  const isInsufficient = withdrawAmount > availableBalance
-  const isValid = withdrawAmount > 0 && !isInsufficient
+  const reset = () => {
+    setTxDigest(null);
+    setBridgeTxHash(null);
+    setError(null);
+    setAmount('');
+  };
 
-  if (!isConnected) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Withdraw USDC</CardTitle>
-          <CardDescription>Connect your wallet to withdraw</CardDescription>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-12">
-          <p className="text-gray-500">Please connect your wallet to continue</p>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  // Success state
   if (txDigest) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Withdraw USDC</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center justify-center py-8 space-y-4"
-          >
-            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-emerald-100 to-green-100 flex items-center justify-center">
-              <CheckCircle2 className="h-8 w-8 text-emerald-600" />
-            </div>
-            <div className="text-center">
-              <h3 className="font-coolvetica text-xl font-semibold text-gray-900 mb-1">
-                Withdrawal Successful!
+      <Card className="border-green-200 bg-green-50">
+        <CardContent className="pt-6">
+          <div className="text-center space-y-4">
+            <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto" />
+            <div>
+              <h3 className="font-bold text-green-900 mb-2">
+                {bridgeBack ? 'Withdrawal & Bridge In Progress!' : 'Withdrawal Successful!'}
               </h3>
-              <p className="text-sm text-gray-600">
-                Your USDC has been withdrawn to your wallet
-              </p>
+              
+              {/* Sui Withdrawal */}
+              <div className="mb-3">
+                <p className="text-sm text-green-700 mb-1">
+                  {bridgeBack ? 'Step 1: Withdrawn from Sui Vault' : 'Withdrawn from Sui Vault:'}
+                </p>
+                <a 
+                  href={`https://suiscan.xyz/testnet/tx/${txDigest}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 hover:underline font-mono"
+                >
+                  {txDigest.slice(0, 10)}...{txDigest.slice(-8)}
+                </a>
+              </div>
+
+              {/* Bridge Transaction */}
+              {bridgeBack && bridgeTxHash && (
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-700 mb-1">Step 2: Bridging to {targetChain.chain.name}</p>
+                  <a 
+                    href={`https://suiscan.xyz/testnet/tx/${bridgeTxHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline font-mono"
+                  >
+                    {bridgeTxHash.slice(0, 10)}...{bridgeTxHash.slice(-8)}
+                  </a>
+                  <p className="text-xs text-blue-600 mt-2">
+                    ⏳ USDC will arrive in ~3 minutes
+                  </p>
+                </div>
+              )}
+
+              {bridgeBack && !bridgeTxHash && (
+                <div className="flex items-center justify-center space-x-2 text-blue-600 p-3 bg-blue-50 rounded-lg">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Bridging to {targetChain.chain.name}...</span>
+                </div>
+              )}
             </div>
-            <div className="w-full max-w-md p-4 rounded-xl bg-gray-50 border border-gray-200">
-              <p className="text-xs text-gray-500 mb-1">Transaction Hash</p>
-              <p className="text-sm font-mono text-gray-900 break-all">
-                {txDigest.slice(0, 8)}...{txDigest.slice(-8)}
-              </p>
-            </div>
-            <Button onClick={reset} variant="outline" className="mt-4">
+            <Button onClick={reset} variant="outline" className="w-full">
               Make Another Withdrawal
             </Button>
-          </motion.div>
+          </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Withdraw USDC</CardTitle>
-        <CardDescription>
-          Withdraw your USDC from the vault to your wallet
-        </CardDescription>
+        <CardTitle className="flex items-center space-x-2">
+          <ArrowDownToLine className="h-5 w-5" />
+          <span>Withdraw from Vault</span>
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Available Balance */}
-        <div className="rounded-xl bg-gradient-to-r from-purple-50 to-blue-50 p-4 border border-purple-100">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">Available to Withdraw</span>
-            <Badge variant="default">{formatUSDCWithSign(info?.userBalance || '0')}</Badge>
-          </div>
-        </div>
-
-        {/* Amount Input */}
+      <CardContent className="space-y-4">
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700">Amount (USDC)</label>
-            <button
-              onClick={handleMaxClick}
-              className="text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors"
-            >
-              Max
-            </button>
-          </div>
-          <div className="relative">
-            <Input
-              type="text"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => handleAmountChange(e.target.value)}
-              className="text-2xl font-semibold pr-20"
-              disabled={withdrawing}
-              error={isInsufficient ? 'Insufficient balance' : undefined}
-            />
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">
-              USDC
-            </div>
-          </div>
+          <label className="text-sm text-gray-600 mb-2 block">
+            Amount (SUI)
+          </label>
+          <Input
+            type="number"
+            placeholder="0.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            disabled={withdrawing || !evmAddress}
+            step="0.01"
+            min="0"
+          />
+          {!evmAddress && (
+            <p className="text-xs text-red-600 mt-1">
+              Please connect your Ethereum wallet
+            </p>
+          )}
         </div>
 
-        {/* Withdrawal Preview */}
-        {amount && isValid && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-xl bg-blue-50 p-4 border border-blue-100"
-          >
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Withdraw Amount:</span>
-                <span className="font-semibold text-gray-900">
-                  {formatUSDCWithSign(amount)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Remaining Balance:</span>
-                <span className="font-semibold text-gray-900">
-                  {formatUSDCWithSign((availableBalance - withdrawAmount).toFixed(6))}
-                </span>
-              </div>
-              <div className="flex justify-between pt-2 border-t border-blue-200">
-                <span className="text-gray-600">Gas Fee:</span>
-                <span className="font-semibold text-gray-900">~$0.01</span>
-              </div>
+        {/* Bridge Back Option */}
+        <div className="p-4 bg-gray-50 rounded-lg space-y-3 border border-gray-200">
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={bridgeBack}
+              onChange={(e) => setBridgeBack(e.target.checked)}
+              className="w-4 h-4 text-purple-600 rounded"
+              disabled={!evmAddress}
+            />
+            <span className="text-sm font-medium text-gray-700">
+              Bridge back to EVM chain
+            </span>
+          </label>
+
+          {bridgeBack && (
+            <div className="space-y-2">
+              <label className="text-xs text-gray-600 mb-1 block">
+                Destination Chain
+              </label>
+              <ChainSelector
+                selectedChain={targetChain}
+                onChainSelect={setTargetChain}
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                💰 USDC will be sent to: {evmAddress ? `${evmAddress.slice(0, 6)}...${evmAddress.slice(-4)}` : 'Connect wallet'}
+              </p>
             </div>
-          </motion.div>
-        )}
-
-        {/* Error Message */}
+          )}
+        </div>
+        
         {error && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-xl bg-red-50 p-4 border border-red-100 flex items-start space-x-3"
-          >
-            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="p-3 bg-red-50 rounded-lg border border-red-200">
             <p className="text-sm text-red-700">{error}</p>
-          </motion.div>
+          </div>
         )}
 
-        {/* Withdraw Button */}
         <Button
           onClick={handleWithdraw}
-          disabled={!isValid || withdrawing}
-          loading={withdrawing}
-          size="lg"
+          disabled={!amount || parseFloat(amount) <= 0 || withdrawing || !evmAddress}
           className="w-full"
+          size="lg"
         >
           {withdrawing ? (
-            'Withdrawing...'
-          ) : (
             <>
-              <ArrowDownToLine className="mr-2 h-5 w-5" />
-              Withdraw {amount || '0'} USDC
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing...
             </>
+          ) : bridgeBack ? (
+            `Withdraw & Bridge ${amount || '0'} SUI to ${targetChain.chain.name}`
+          ) : (
+            `Withdraw ${amount || '0'} SUI`
           )}
         </Button>
+
+        <p className="text-xs text-gray-500 text-center">
+          {bridgeBack 
+            ? '🌉 Withdrawal + Bridge takes ~3 minutes via Circle CCTP' 
+            : '⚡ Withdrawal is instant and gas-free'}
+        </p>
       </CardContent>
     </Card>
-  )
+  );
 }

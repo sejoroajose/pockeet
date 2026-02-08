@@ -1,17 +1,40 @@
 'use client';
 
-import { createPublicClient, http } from 'viem';
+import { createPublicClient, http, fallback } from 'viem';
 import { normalize } from 'viem/ens';
 import { mainnet, sepolia } from 'viem/chains';
 import type { Address } from 'viem';
 
 // Select network based on environment
-const chain = process.env.NEXT_PUBLIC_ENS_NETWORK === 'mainnet' ? mainnet : sepolia;
+const chain = process.env.NEXT_PUBLIC_ENS_NETWORK === 'sepolia' ? mainnet : sepolia;
 
-// Create public client
+const getTransport = () => {
+  if (chain.id === 1) {
+    return fallback([
+      http('https://eth.llamarpc.com'),
+      http('https://ethereum.publicnode.com'),
+      http('https://rpc.ankr.com/eth'),
+    ]);
+  } else {
+    return fallback([
+      http('https://ethereum-sepolia-rpc.publicnode.com'),
+      http('https://rpc.sepolia.org'),
+      http('https://rpc2.sepolia.org'),
+      http('https://sepolia.gateway.tenderly.co'),
+    ], {
+      retryCount: 2,
+      retryDelay: 500,
+    });
+  }
+};
+
+// Create public client with fallback and retry logic
 export const ensPublicClient = createPublicClient({
   chain,
-  transport: http(),
+  transport: getTransport(),
+  batch: {
+    multicall: true,
+  },
 });
 
 /**
@@ -31,53 +54,80 @@ export async function resolveENS(name: string): Promise<Address | null> {
 }
 
 /**
- * Reverse resolve address to ENS name
+ * Reverse resolve address to ENS name with timeout
  */
 export async function reverseResolveENS(address: Address): Promise<string | null> {
   try {
-    const name = await ensPublicClient.getEnsName({
+    // Add a timeout wrapper
+    const timeoutPromise = new Promise<null>((_, reject) => 
+      setTimeout(() => reject(new Error('Timeout')), 8000)
+    );
+    
+    const resolvePromise = ensPublicClient.getEnsName({
       address,
     });
     
+    const name = await Promise.race([resolvePromise, timeoutPromise]);
+    
     return name;
   } catch (error) {
-    console.error('ENS reverse resolution failed:', error);
+    // Don't log timeout errors in production
+    if (error instanceof Error && error.message !== 'Timeout') {
+      console.error('ENS reverse resolution failed:', error);
+    }
     return null;
   }
 }
 
 /**
- * Get ENS avatar
+ * Get ENS avatar with timeout
  */
 export async function getENSAvatar(name: string): Promise<string | null> {
   try {
-    const avatar = await ensPublicClient.getEnsAvatar({
+    const timeoutPromise = new Promise<null>((_, reject) => 
+      setTimeout(() => reject(new Error('Timeout')), 5000)
+    );
+    
+    const avatarPromise = ensPublicClient.getEnsAvatar({
       name: normalize(name),
     });
     
+    const avatar = await Promise.race([avatarPromise, timeoutPromise]);
+    
     return avatar;
   } catch (error) {
-    console.error('ENS avatar fetch failed:', error);
+    if (error instanceof Error && error.message !== 'Timeout') {
+      console.error('ENS avatar fetch failed:', error);
+    }
     return null;
   }
 }
 
 /**
- * Get ENS text record
+ * Get ENS text record with timeout
  */
 export async function getTextRecord(name: string, key: string): Promise<string | null> {
   try {
-    const text = await ensPublicClient.getEnsText({
+    const timeoutPromise = new Promise<null>((_, reject) => 
+      setTimeout(() => reject(new Error('Timeout')), 5000)
+    );
+    
+    const textPromise = ensPublicClient.getEnsText({
       name: normalize(name),
       key,
     });
     
+    const text = await Promise.race([textPromise, timeoutPromise]);
+    
     return text;
   } catch (error) {
-    console.error('ENS text record fetch failed:', error);
+    if (error instanceof Error && error.message !== 'Timeout') {
+      console.error('ENS text record fetch failed:', error);
+    }
     return null;
   }
 }
+
 
 /**
  * Get multiple ENS text records

@@ -3,12 +3,11 @@ import { getSuiClient, executeTransaction } from '../sui/client';
 import type { SuiNetwork } from '../sui/types';
 import type { Address } from 'viem';
 
-// CCTP contract addresses on Sui (these are examples - replace with actual)
 const SUI_TOKEN_MESSENGER_MINTER = process.env.NEXT_PUBLIC_SUI_TOKEN_MESSENGER_MINTER!;
 const SUI_MESSAGE_TRANSMITTER = process.env.NEXT_PUBLIC_SUI_MESSAGE_TRANSMITTER!;
 
-// Arc domain (Circle's domain identifier for Arc)
-const ARC_DOMAIN = 5042002; // Update with actual Arc domain from Circle
+
+const ARC_DOMAIN = 5042002; 
 
 export interface SuiBridgeResult {
   txDigest: string;
@@ -68,22 +67,30 @@ export async function getSuiAttestation(
   const client = getSuiClient(network);
   
   try {
-    // Get transaction details
-    const txResponse = await client.getTransactionBlock({
+    const result = await client.core.getTransaction({
       digest: txDigest,
-      options: {
-        showEvents: true,
-        showEffects: true,
+      include: {
+        effects: true,
+        events: true,
+        transaction: true,
       },
     });
     
-    if (!txResponse.events) {
+    if (!result.Transaction) {
+      throw new Error('Transaction not found');
+    }
+    
+    if (!result.Transaction.events || result.Transaction.events.length === 0) {
       throw new Error('No events found in transaction');
     }
     
-    // Find MessageSent event
-    const messageSentEvent = txResponse.events.find(
-      event => event.type.includes('MessageSent')
+    const messageSentEvent = result.Transaction.events.find(
+      (event: any) => {
+        // Check if event has the MessageSent type
+        return event.eventType?.includes('MessageSent') || 
+               event.$kind === 'MessageSent' ||
+               (event.type && event.type.includes('MessageSent'));
+      }
     );
     
     if (!messageSentEvent) {
@@ -91,8 +98,25 @@ export async function getSuiAttestation(
     }
     
     // Extract message hash from event
-    const eventData = messageSentEvent.parsedJson as any;
-    const messageHash = eventData.message_hash;
+    // The event data structure varies, so we need to handle different cases
+    let messageHash: string;
+    
+    if ((messageSentEvent as any).data) {
+      // If event has a 'data' field
+      const eventData = (messageSentEvent as any).data;
+      messageHash = eventData.message_hash || eventData.messageHash;
+    } else if ((messageSentEvent as any).parsedJson) {
+      // If event has parsedJson
+      const eventData = (messageSentEvent as any).parsedJson;
+      messageHash = eventData.message_hash || eventData.messageHash;
+    } else {
+      // Direct access
+      messageHash = (messageSentEvent as any).message_hash || (messageSentEvent as any).messageHash;
+    }
+    
+    if (!messageHash) {
+      throw new Error('Message hash not found in event');
+    }
     
     // Poll Circle's Attestation API
     const attestation = await pollForAttestation(messageHash);
@@ -112,8 +136,8 @@ async function pollForAttestation(
   maxAttempts: number = 20,
   delayMs: number = 3000
 ): Promise<string | null> {
-  const baseUrl = 'https://iris-api-sandbox.circle.com'; // Use production for mainnet
-  
+  const baseUrl = 'https://iris-api-sandbox.circle.com'; 
+
   for (let i = 0; i < maxAttempts; i++) {
     try {
       const response = await fetch(
@@ -146,7 +170,7 @@ function arcAddressToBytes(arcAddress: Address): number[] {
   // Convert hex string to bytes
   const bytes: number[] = [];
   for (let i = 0; i < cleanAddress.length; i += 2) {
-    bytes.push(parseInt(cleanAddress.substr(i, 2), 16));
+    bytes.push(parseInt(cleanAddress.substring(i, i + 2), 16));
   }
   
   return bytes;

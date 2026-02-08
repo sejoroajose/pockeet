@@ -4,10 +4,11 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useConnection } from 'wagmi'
 import { motion } from 'framer-motion'
-import { Wallet, ArrowDownToLine, History, TrendingUp } from 'lucide-react'
+import { Wallet, TrendingUp } from 'lucide-react'
 import { VaultBalance } from '@/components/vault/vault-balance'
-import { WithdrawForm } from '@/components/vault/withdraw-form'
 import { TransactionHistory } from '@/components/vault/transaction-history'
+import { WithdrawForm } from '@/components/vault/withdraw-form'
+import { YieldSimulator } from '@/components/vault/yield-simulator'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { PageLoader } from '@/components/ui/loading'
@@ -51,7 +52,7 @@ export default function VaultPage() {
             </h1>
           </div>
           <p className="text-gray-600 text-lg">
-            Manage your USDC balance and withdrawals
+            Manage your deposits, withdrawals, and yield
           </p>
         </motion.div>
 
@@ -71,7 +72,7 @@ export default function VaultPage() {
                     <span className="text-sm text-gray-600">Your Balance</span>
                   </div>
                   <p className="text-2xl font-coolvetica font-bold text-gray-900">
-                    ${userBalance.toFixed(2)}
+                    {userBalance.toFixed(4)} SUI
                   </p>
                 </div>
                 <div>
@@ -80,7 +81,7 @@ export default function VaultPage() {
                     <span className="text-sm text-gray-600">Yield Earned</span>
                   </div>
                   <p className="text-2xl font-coolvetica font-bold text-emerald-700">
-                    ${yieldEarned.toFixed(2)}
+                    {yieldEarned.toFixed(4)} SUI
                   </p>
                 </div>
                 <div>
@@ -108,9 +109,9 @@ export default function VaultPage() {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Balance & Withdraw */}
+          {/* Left Column - Balance & Actions */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Vault Balance Card */}
+            {/* Vault Balance */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -134,7 +135,7 @@ export default function VaultPage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 }}
             >
-              <Card>
+              {/* <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Active Strategy</CardTitle>
@@ -159,23 +160,27 @@ export default function VaultPage() {
                       <p className="text-lg font-semibold text-purple-700">Active</p>
                     </div>
                   </div>
-
-                  <div className="pt-4 border-t border-gray-200">
-                    <button className="w-full px-4 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium transition-colors">
-                      Change Strategy →
-                    </button>
-                  </div>
                 </CardContent>
-              </Card>
+              </Card> */}
             </motion.div>
           </div>
 
-          {/* Right Column - Transaction History */}
+          {/* Right Column - History & Yield Simulator */}
           <div className="space-y-6">
+            {/* Yield Simulator - NEW */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
+            >
+              <YieldSimulator vaultId={vaultId} />
+            </motion.div>
+
+            {/* Transaction History */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
             >
               <TransactionHistory vaultId={vaultId} limit={15} />
             </motion.div>
@@ -184,7 +189,7 @@ export default function VaultPage() {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
+              transition={{ delay: 0.4 }}
             >
               <Card>
                 <CardHeader>
@@ -198,13 +203,13 @@ export default function VaultPage() {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total Deposited</span>
                     <span className="font-semibold text-gray-900">
-                      ${totalDeposited.toFixed(2)}
+                      {totalDeposited.toFixed(4)} SUI
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total Yield</span>
                     <span className="font-semibold text-emerald-700">
-                      ${yieldEarned.toFixed(2)}
+                      {yieldEarned.toFixed(4)} SUI
                     </span>
                   </div>
                   <div className="flex justify-between">

@@ -3,7 +3,8 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { ProvidersWrapper } from "@/components/ProvidersWrapper";
+import { Providers } from "@/lib/providers.client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -33,20 +34,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="en" className="scroll-smooth" data-scroll-behavior="smooth">
       <head>
         <link href="https://fonts.cdnfonts.com/css/coolvetica" rel="stylesheet" />
       </head>
       <body className={`${geist.variable} antialiased bg-gray-50 min-h-screen`}>
-        <ProvidersWrapper>
-          <div className="flex flex-col min-h-screen">
-            <Header />
-            <main className="flex-1">
-              {children}
-            </main>
-            <Footer />
-          </div>
-        </ProvidersWrapper>
+        <ErrorBoundary>
+          <Providers>
+            <div className="flex flex-col min-h-screen">
+              <Header />
+              <main className="flex-1">
+                {children}
+              </main>
+              <Footer />
+            </div>
+          </Providers>
+        </ErrorBoundary>
       </body>
     </html>
   );

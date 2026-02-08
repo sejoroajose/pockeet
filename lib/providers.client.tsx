@@ -2,10 +2,11 @@
 
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ConnectKitProvider, getDefaultConfig } from 'connectkit';
+import { ConnectKitProvider } from 'connectkit';
 import { mainnet, sepolia, base, arbitrum, optimism, polygon } from 'wagmi/chains';
-import { createDAppKit, DAppKitProvider } from '@mysten/dapp-kit-react';
-import { SuiGrpcClient } from '@mysten/sui/grpc';
+import { injected, walletConnect, coinbaseWallet } from 'wagmi/connectors';
+import dynamic from 'next/dynamic';
+import { ReactNode } from 'react';
 
 export const arcTestnet = {
   id: 5042002,
@@ -33,54 +34,62 @@ export const arcTestnet = {
   testnet: true,
 } as const;
 
-const wagmiConfig = createConfig(
-  getDefaultConfig({
-    appName: 'pockeet',
-    walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
-    chains: [arcTestnet, sepolia, mainnet, base, arbitrum, optimism, polygon],
-    transports: {
-      [arcTestnet.id]: http(),
-      [sepolia.id]: http(),
-      [mainnet.id]: http(),
-      [base.id]: http(),
-      [arbitrum.id]: http(),
-      [optimism.id]: http(),
-      [polygon.id]: http(),
-    },
-  })
-);
+const chains = [arcTestnet, sepolia, mainnet, base, arbitrum, optimism, polygon] as const;
 
-const dAppKit = createDAppKit({
-  networks: ['testnet', 'mainnet'],
-  defaultNetwork: 'testnet',
-  createClient(network) {
-    return new SuiGrpcClient({
-      network,
-      baseUrl:
-        network === 'mainnet'
-          ? 'https://fullnode.mainnet.sui.io:443'
-          : 'https://fullnode.testnet.sui.io:443',
-    });
+
+const wagmiConfig = createConfig({
+  chains,
+  connectors: [
+    injected({ shimDisconnect: true }),
+    walletConnect({
+      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
+      metadata: {
+        name: 'pockeet',
+        description: 'Your Smart USDC Treasury',
+        url: 'https://pockeet.xyz',
+        icons: ['https://pockeet.xyz/logo.png'],
+      },
+      showQrModal: false,
+    }),
+    coinbaseWallet({
+      appName: 'pockeet',
+      appLogoUrl: 'https://pockeet.xyz/logo.png',
+    }),
+  ],
+  transports: {
+    [arcTestnet.id]: http(),
+    [sepolia.id]: http(),
+    [mainnet.id]: http(),
+    [base.id]: http(),
+    [arbitrum.id]: http(),
+    [optimism.id]: http(),
+    [polygon.id]: http(),
   },
 });
-
-declare module '@mysten/dapp-kit-react' {
-  interface Register {
-    dAppKit: typeof dAppKit;
-  }
-}
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
+      staleTime: 1000 * 60 * 5,
     },
   },
 });
 
 
-export function Providers({ children }: { children: React.ReactNode }) {
+const SuiProviderFallback = ({ children }: { children: ReactNode }) => <>{children}</>;
+
+
+const SuiProviderWrapper = dynamic(
+  () => import('./SuiProviderWrapper').then((mod) => mod.SuiProviderWrapper),
+  { 
+    ssr: false,
+    loading: () => null, 
+  }
+);
+
+export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
@@ -91,9 +100,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
             enforceSupportedChains: false,
           }}
         >
-          <DAppKitProvider dAppKit={dAppKit}>
+          <SuiProviderWrapper>
             {children}
-          </DAppKitProvider>
+          </SuiProviderWrapper>
         </ConnectKitProvider>
       </WagmiProvider>
     </QueryClientProvider>
