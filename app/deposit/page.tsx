@@ -8,20 +8,24 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { formatUnits } from 'viem';
-import { useCCTPBridge } from '@/lib/arc/hook';
-import { CCTPRouteDisplay } from '@/components/routing/cctp-route-display';
-import { getArcUSDCBalance } from '@/lib/arc/client';
-
-const ARC_TESTNET_CHAIN_ID = 5042002;
+import { formatUnits, createPublicClient, http, erc20Abi } from 'viem';
+import { useCCTPBridge } from '@/lib/cctp/useCCTPBridge';
+import { ChainSelector } from '@/components/cctp/chain-selector';
+import { CCTP_CHAINS, type CCTPChainConfig, getCCTPChain } from '@/lib/arc/chains';
+import { useMultiChainBalance } from '@/lib/cctp/useMultiChainBalance';
+import { fallback } from 'viem';
 
 export default function DepositPage() {
   const { address, isConnected, chainId } = useConnection();
   const router = useRouter();
+  
+  const [selectedChain, setSelectedChain] = useState<CCTPChainConfig>(CCTP_CHAINS.sepolia);
   const [amount, setAmount] = useState('');
   const [balance, setBalance] = useState('0');
   const [balanceLoading, setBalanceLoading] = useState(false);
+
+  const { balances, totalBalance, loading: multiChainLoading, refetch } = useMultiChainBalance(address);
+  const { execute, executing, progress, error, success, txHash, reset } = useCCTPBridge(selectedChain);
 
   useEffect(() => {
     if (!isConnected) {
@@ -29,18 +33,42 @@ export default function DepositPage() {
     }
   }, [isConnected, router]);
 
-  // Fetch balance using Arc client
+  useEffect(() => {
+    if (chainId) {
+      const chain = getCCTPChain(chainId);
+      if (chain) {
+        setSelectedChain(chain);
+      }
+    }
+  }, [chainId]);
+
+  // Fetch balance for selected chain
   const fetchBalance = async () => {
     if (!address) return;
     
     setBalanceLoading(true);
     try {
-      console.log('Fetching balance for:', address);
-      const balanceWei = await getArcUSDCBalance(address);
-      const balanceFormatted = formatUnits(balanceWei, 6);
-      console.log('Balance (wei):', balanceWei.toString());
-      console.log('Balance (formatted):', balanceFormatted);
-      setBalance(balanceFormatted);
+      const client = createPublicClient({
+        chain: selectedChain.chain,
+        transport: fallback([
+          http(selectedChain.rpcUrl),
+          http(), // Fallback to default
+        ], {
+          rank: true,
+          retryCount: 3,
+          retryDelay: 1000,
+        }),
+      });
+
+      const balanceWei = await client.readContract({
+        address: selectedChain.usdcAddress,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [address],
+      });
+
+      const formatted = formatUnits(balanceWei, 6);
+      setBalance(formatted);
     } catch (error) {
       console.error('Failed to fetch balance:', error);
       setBalance('0');
@@ -50,17 +78,14 @@ export default function DepositPage() {
   };
 
   useEffect(() => {
-    if (address && chainId === ARC_TESTNET_CHAIN_ID) {
+    if (address) {
       fetchBalance();
     }
-  }, [address, chainId]);
+  }, [address, selectedChain]);
 
   const balanceNum = parseFloat(balance);
   const amountNum = parseFloat(amount || '0');
-
-  const { execute, executing, progress, error, success, txHash, reset } = useCCTPBridge();
-
-  const isWrongChain = chainId !== ARC_TESTNET_CHAIN_ID;
+  const isWrongChain = chainId !== selectedChain.chain.id;
   const isDepositValid = amount && amountNum > 0 && amountNum <= balanceNum && !executing && !isWrongChain;
 
   if (!isConnected) return null;
@@ -77,7 +102,7 @@ export default function DepositPage() {
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Deposit Successful!</h2>
                 <p className="text-gray-600">
-                  Your USDC is being bridged to Sui via Circle CCTP
+                  Your USDC is being bridged from {selectedChain.chain.name} to Sui via Circle CCTP
                 </p>
               </div>
               <div className="w-full p-4 bg-gray-50 rounded-lg">
@@ -110,31 +135,41 @@ export default function DepositPage() {
         </Link>
         <h1 className="text-3xl font-bold text-gray-900">Deposit USDC</h1>
         <p className="text-gray-600 mt-1">
-          Deposit from Arc Network → Sui via Circle CCTP
+          Deposit from any supported chain → Sui Vault via Circle CCTP
         </p>
       </div>
 
-      {/* Debug Info Card */}
-      <Card className="mb-6 border-blue-200 bg-blue-50">
-        <CardContent className="pt-6">
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Connected Address:</span>
-              <span className="font-mono text-gray-900">{address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Not connected'}</span>
+      {/* Multi-Chain Balance Overview */}
+      <Card className="mb-6 border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50">
+        <CardHeader>
+          <CardTitle>Your USDC Across Chains</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {multiChainLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Current Chain:</span>
-              <span className="font-semibold text-gray-900">{chainId === ARC_TESTNET_CHAIN_ID ? 'Arc Testnet ✓' : `Chain ${chainId}`}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">USDC Contract:</span>
-              <span className="font-mono text-xs text-gray-900">{process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x036CbD53842c5426634e7929541eC2318f3dCF7e'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Balance (raw):</span>
-              <span className="font-semibold text-gray-900">{balance} USDC</span>
-            </div>
-          </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                {balances.map((bal) => (
+                  <div
+                    key={bal.chainId}
+                    className="p-3 bg-white rounded-lg border border-gray-200"
+                  >
+                    <div className="text-xs text-gray-600 mb-1">{bal.chainName}</div>
+                    <div className="text-lg font-semibold text-gray-900">
+                      {bal.formattedBalance} USDC
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                <span className="text-sm font-medium text-gray-700">Total Balance:</span>
+                <span className="text-xl font-bold text-gray-900">{totalBalance} USDC</span>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -148,7 +183,7 @@ export default function DepositPage() {
                   <div>
                     <p className="font-semibold text-orange-900 mb-1">Wrong Network</p>
                     <p className="text-sm text-orange-700 mb-3">
-                      Please switch to Arc Testnet (Chain ID: 5042002)
+                      Please switch to {selectedChain.chain.name} (Chain ID: {selectedChain.chain.id})
                     </p>
                   </div>
                 </div>
@@ -161,15 +196,10 @@ export default function DepositPage() {
               <CardTitle className="text-lg">Source Chain</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="p-4 rounded-lg bg-purple-50 border-2 border-purple-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-gray-900">Arc Testnet</div>
-                    <div className="text-sm text-gray-600">Circle's USDC Hub</div>
-                  </div>
-                  <Badge variant="default">Selected</Badge>
-                </div>
-              </div>
+              <ChainSelector
+                selectedChain={selectedChain}
+                onChainSelect={setSelectedChain}
+              />
             </CardContent>
           </Card>
 
@@ -181,7 +211,7 @@ export default function DepositPage() {
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-2">
                   <Wallet className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">Balance:</span>
+                  <span className="text-sm text-gray-600">Balance on {selectedChain.chain.name}:</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   {balanceLoading ? (
@@ -232,18 +262,6 @@ export default function DepositPage() {
                 </div>
               )}
 
-              {balanceNum === 0 && !balanceLoading && !isWrongChain && (
-                <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <p className="text-sm text-yellow-800 font-medium mb-2">No USDC found on Arc Testnet</p>
-                  <p className="text-xs text-yellow-700">
-                    Please ensure you:
-                    <br />1. Are connected to Arc Testnet (Chain ID: 5042002)
-                    <br />2. Have USDC at address: {process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x036...'}
-                    <br />3. Check your balance on Arc Explorer
-                  </p>
-                </div>
-              )}
-
               <Button
                 onClick={() => execute(amount)}
                 disabled={!isDepositValid}
@@ -257,7 +275,7 @@ export default function DepositPage() {
                   : amountNum > balanceNum
                   ? 'Insufficient Balance'
                   : isWrongChain
-                  ? 'Switch to Arc Testnet'
+                  ? `Switch to ${selectedChain.chain.name}`
                   : `Deposit ${amount} USDC`}
               </Button>
             </CardContent>
@@ -265,9 +283,51 @@ export default function DepositPage() {
         </div>
 
         <div>
-          {amount && parseFloat(amount) > 0 && (
-            <CCTPRouteDisplay amount={amount} />
-          )}
+          <Card>
+            <CardHeader>
+              <CardTitle>Bridge Route</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
+                  <div>
+                    <div className="font-semibold">{selectedChain.chain.name}</div>
+                    <div className="text-sm text-gray-600">Source</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold">{amount || '0.00'} USDC</div>
+                    <div className="text-xs text-gray-600">Domain {selectedChain.domain}</div>
+                  </div>
+                </div>
+
+                <div className="flex justify-center">
+                  <div className="h-12 w-px bg-gradient-to-b from-purple-500 to-blue-500" />
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                  <div>
+                    <div className="font-semibold">Sui Testnet</div>
+                    <div className="text-sm text-gray-600">Destination</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold">{amount || '0.00'} USDC</div>
+                    <div className="text-xs text-gray-600">Domain 8</div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-gray-600">Bridge Fee</span>
+                    <span className="font-semibold text-gray-900">$0.00</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Est. Time</span>
+                    <span className="font-semibold text-gray-900">~15 mins</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
