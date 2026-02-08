@@ -3,13 +3,11 @@ import { arcPublicClient, getUSDCAddress } from './client';
 import type { WalletClient } from 'viem';
 import { arcTestnet } from './client';
 
-// CCTP Contract addresses on Arc
 const TOKEN_MESSENGER = (process.env.NEXT_PUBLIC_ARC_TOKEN_MESSENGER || 
   '0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5') as Address;
 
 const SUI_DOMAIN = 8; 
 
-// CCTP TokenMessenger ABI
 const TOKEN_MESSENGER_ABI = [
   {
     name: 'depositForBurn',
@@ -29,6 +27,8 @@ export interface BridgeResult {
   burnTxHash: Hash;
   amount: string;
   recipient: string;
+  message?: string;       
+  messageHash?: string;    
   attestation?: string;
 }
 
@@ -63,7 +63,7 @@ export async function bridgeArcToSui(
   await arcPublicClient.waitForTransactionReceipt({ hash: approveTx });
   console.log('Approval confirmed:', approveTx);
   
- const burnSimulation = await arcPublicClient.simulateContract({
+  const burnSimulation = await arcPublicClient.simulateContract({
     address: TOKEN_MESSENGER,
     abi: TOKEN_MESSENGER_ABI,
     functionName: 'depositForBurn',
@@ -81,13 +81,35 @@ export async function bridgeArcToSui(
 
   const burnTxHash = await walletClient.writeContract(burnSimulation.request);
   
-  await arcPublicClient.waitForTransactionReceipt({ hash: burnTxHash });
+  const receipt = await arcPublicClient.waitForTransactionReceipt({ hash: burnTxHash });
   console.log('Burn confirmed:', burnTxHash);
+  
+  let message: string | undefined;
+  let messageHash: string | undefined;
+  
+  try {
+    // Find MessageSent event
+    const messageSentLog = receipt.logs.find(log => 
+      log.topics[0] === '0x8c5261668696ce22758910d05bab8f186d6eb247ceac2af2e82c7dc17669b036' // MessageSent topic
+    );
+    
+    if (messageSentLog && messageSentLog.data) {
+      message = messageSentLog.data;
+      // Calculate message hash for attestation
+      const { keccak256 } = await import('viem');
+      messageHash = keccak256(message as `0x${string}`);
+      console.log('Message hash:', messageHash);
+    }
+  } catch (error) {
+    console.error('Failed to extract message:', error);
+  }
   
   return {
     burnTxHash: burnTxHash,
     amount,
     recipient: suiRecipient,
+    message,
+    messageHash,
   };
 }
 
@@ -109,7 +131,35 @@ export async function estimateBridgeFee(amount: string): Promise<{
   };
 }
 
+// ✅ NEW: Get Circle attestation
+export async function getAttestation(messageHash: string): Promise<string | null> {
+  const maxAttempts = 40;
+  const delayMs = 5000;
+  
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const response = await fetch(
+        `https://iris-api-sandbox.circle.com/attestations/${messageHash}`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'complete') {
+          return data.attestation;
+        }
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    } catch (error) {
+      console.error('Attestation poll error:', error);
+    }
+  }
+  
+  return null;
+}
+
 export default {
   bridgeArcToSui,
   estimateBridgeFee,
+  getAttestation,
 };

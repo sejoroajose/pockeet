@@ -1,4 +1,4 @@
-import { type Address, type Hash, parseUnits, erc20Abi, createPublicClient, http, fallback } from 'viem';
+import { type Address, type Hash, parseUnits, erc20Abi, createPublicClient, http, fallback, decodeEventLog, keccak256 } from 'viem';
 import type { WalletClient } from 'viem';
 import { type CCTPChainConfig, SUI_DOMAIN } from '../arc/chains';
 
@@ -15,13 +15,29 @@ const TOKEN_MESSENGER_ABI = [
     ],
     outputs: [{ name: 'nonce', type: 'uint64' }],
   },
+  {
+    type: 'event',
+    name: 'MessageSent',
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'bytes',
+        name: 'message',
+        type: 'bytes',
+      },
+    ],
+  },
 ] as const;
+
+const MESSAGE_SENT_TOPIC = '0x8c5261668696ce22758910d05bab8f186d6eb247ceac2af2e82c7dc17669b036' as const;
 
 export interface BridgeResult {
   burnTxHash: Hash;
   amount: string;
   recipient: string;
   sourceChain: string;
+  message: `0x${string}`;
+  messageHash: `0x${string}`;
 }
 
 export async function bridgeToSui(
@@ -41,7 +57,7 @@ export async function bridgeToSui(
     chain: sourceChain.chain,
     transport: fallback([
       http(sourceChain.rpcUrl),
-      http(), // Fallback to default
+      http(), 
     ], {
       rank: true,
       retryCount: 3,
@@ -80,14 +96,37 @@ export async function bridgeToSui(
   const burnTxHash = await walletClient.writeContract(burnRequest);
   
   console.log('Waiting for burn confirmation...');
-  await publicClient.waitForTransactionReceipt({ hash: burnTxHash });
+  const receipt = await publicClient.waitForTransactionReceipt({ hash: burnTxHash });
   console.log('Burn confirmed:', burnTxHash);
+
+  // Find the MessageSent event emitted by the MessageTransmitter contract
+  const messageLog = receipt.logs.find(
+    (log) =>
+      log.address.toLowerCase() === sourceChain.messageTransmitter.toLowerCase() &&
+      log.topics[0] === MESSAGE_SENT_TOPIC
+  );
+
+  if (!messageLog) {
+    throw new Error('MessageSent event not found in burn transaction receipt');
+  }
+
+  const { args } = decodeEventLog({
+    abi: TOKEN_MESSENGER_ABI,
+    eventName: 'MessageSent',
+    topics: messageLog.topics,
+    data: messageLog.data,
+  }) as { args: { message: `0x${string}` } };
+
+  const message = args.message;
+  const messageHash = keccak256(message);
 
   return {
     burnTxHash,
     amount,
     recipient: suiRecipient,
     sourceChain: sourceChain.chain.name,
+    message,
+    messageHash,
   };
 }
 

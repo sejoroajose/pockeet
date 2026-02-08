@@ -135,7 +135,7 @@ export default function VaultPage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 }}
             >
-              <Card>
+              {/* <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Active Strategy</CardTitle>
@@ -161,7 +161,7 @@ export default function VaultPage() {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+              </Card> */}
             </motion.div>
           </div>
 

@@ -90,8 +90,12 @@ async function main() {
   const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(AMOUNT)]);
 
   tx.moveCall({
-    target: `${PACKAGE_ID}::vault::deposit`,
-    arguments: [tx.object(VAULT_ID!), coin],
+  target: `${PACKAGE_ID}::vault::deposit`,
+    arguments: [
+      tx.object(VAULT_ID!), 
+      coin,
+      tx.pure.address(address)  
+    ],
     typeArguments: ['0x2::sui::SUI'],
   });
 

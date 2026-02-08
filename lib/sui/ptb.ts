@@ -26,16 +26,14 @@ export interface YieldDepositArgs {
 // Build deposit transaction
 export function buildDepositTx(args: VaultDepositArgs): Transaction {
   const tx = new Transaction();
-  
-  // Split coin if needed
   const [coin] = tx.splitCoins(tx.gas, [args.amount]);
   
-  // Call deposit function
   tx.moveCall({
     target: `${args.packageId}::vault::deposit`,
     arguments: [
       tx.object(args.vaultId),
       coin,
+      tx.pure.address(args.userAddress)  
     ],
     typeArguments: [args.coinType],
   });
