@@ -90,6 +90,7 @@ public fun create_vault<T>(_admin: &VaultAdminCap, ctx: &mut TxContext) {
 public fun deposit<T>(
     vault: &mut Vault<T>,
     payment: Coin<T>,
+    beneficiary: address,  
     ctx: &mut TxContext
 ) {
     assert!(!vault.paused, EVaultPaused);
@@ -97,65 +98,74 @@ public fun deposit<T>(
     let amount = payment.value();
     assert!(amount > 0, EInvalidAmount);
 
-    let depositor = ctx.sender();
     let timestamp = ctx.epoch_timestamp_ms();
 
     // Add to reserve FIRST
     vault.reserve.join(payment.into_balance());
     vault.total_deposited = vault.total_deposited + amount;
 
-    // Update user balance
-    if (vault.balances.contains(depositor)) {
-        let balance = &mut vault.balances[depositor];
+    // Update beneficiary balance (not sender!)
+    if (vault.balances.contains(beneficiary)) {
+        let balance = &mut vault.balances[beneficiary];
         *balance = *balance + amount;
     } else {
-        vault.balances.add(depositor, amount);
+        vault.balances.add(beneficiary, amount);
     };
 
-    // Get new balance
-    let new_balance = vault.balances[depositor];
+    let new_balance = vault.balances[beneficiary];
 
     event::emit(DepositEvent {
-        user: depositor,
+        user: beneficiary,  // Changed from depositor to beneficiary
         amount,
         new_balance,
         timestamp,
     });
 }
 
-/// Withdraws coins from vault
-public fun withdraw<T>(
+/// Withdraw with relayer support - sends to specified recipient
+public fun withdraw_to<T>(
     vault: &mut Vault<T>,
+    owner: address,      // NEW: whose balance to deduct
+    recipient: address,  // NEW: where to send coins
     amount: u64,
     ctx: &mut TxContext
 ) {
     assert!(!vault.paused, EVaultPaused);
     assert!(amount > 0, EInvalidAmount);
 
-    let withdrawer = ctx.sender();
     let timestamp = ctx.epoch_timestamp_ms();
     
-    assert!(vault.balances.contains(withdrawer), EInsufficientBalance);
-    let balance = &mut vault.balances[withdrawer];
+    assert!(vault.balances.contains(owner), EInsufficientBalance);
+    let balance = &mut vault.balances[owner];
     assert!(*balance >= amount, EInsufficientBalance);
 
-    // Update user balance
+    // Update owner balance
     *balance = *balance - amount;
     let new_balance = *balance;
 
-    // Withdraw from reserve
+    // Withdraw from reserve and send to recipient
     let withdrawn = vault.reserve.split(amount);
     let coin = coin::from_balance(withdrawn, ctx);
-    transfer::public_transfer(coin, withdrawer);
+    transfer::public_transfer(coin, recipient);
 
     vault.total_deposited = vault.total_deposited - amount;
 
     event::emit(WithdrawEvent {
-        user: withdrawer,
+        user: owner,
         amount,
         new_balance,
         timestamp,
     });
+}
+
+/// Original withdraw (for backward compatibility)
+public fun withdraw<T>(
+    vault: &mut Vault<T>,
+    amount: u64,
+    ctx: &mut TxContext
+) {
+    let sender = ctx.sender();
+    withdraw_to(vault, sender, sender, amount, ctx);
 }
 
 /// Adds yield from strategies (called by authorized contracts)

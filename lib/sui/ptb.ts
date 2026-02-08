@@ -43,6 +43,33 @@ export function buildDepositTx(args: VaultDepositArgs): Transaction {
   return tx;
 }
 
+
+export interface VaultWithdrawToArgs {
+  vaultId: string;
+  packageId: string;
+  coinType: string;
+  ownerAddress: string;
+  recipientAddress: string;
+  amount: string;
+}
+
+export function buildWithdrawToTx(args: VaultWithdrawToArgs): Transaction {
+  const tx = new Transaction();
+  
+  tx.moveCall({
+    target: `${args.packageId}::vault::withdraw_to`,
+    arguments: [
+      tx.object(args.vaultId),
+      tx.pure.address(args.ownerAddress),
+      tx.pure.address(args.recipientAddress),
+      tx.pure.u64(args.amount),
+    ],
+    typeArguments: [args.coinType],
+  });
+  
+  return tx;
+}
+
 // Build withdraw transaction
 export function buildWithdrawTx(args: VaultWithdrawArgs): Transaction {
   const tx = new Transaction();

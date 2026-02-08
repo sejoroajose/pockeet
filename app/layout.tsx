@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
 import { Providers } from "@/lib/providers.client";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -45,6 +46,7 @@ export default function RootLayout({
               <main className="flex-1">
                 {children}
               </main>
+              <Footer />
             </div>
           </Providers>
         </ErrorBoundary>
