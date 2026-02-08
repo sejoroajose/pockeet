@@ -1,0 +1,9 @@
+{
+  "network": "testnet",
+  "packageId": "0x529b82922cfbad1d779f7d09685dd6c89d2e0d9bdbf1b59d6190ee25ecc5704a",
+  "vaultId": "0x36547abeb0dd53e7d4700bf373ed400bec1808753f62439d89f80b9950c3c574",
+  "adminCapId": "0xa1f9ba4ad387060c02e4589e7f7bfa21f62da96d0d7de0e7b05e3cf7d81b1dda",
+  "digest": "4xALVzQFpHzDJdt9BtiQ7NnTtZqsxhthwZWAUEqYLgzg",
+  "timestamp": "2026-02-08T05:10:22.029Z",
+  "vaultCreatedAt": "2026-02-08T05:12:41.863Z"
+}

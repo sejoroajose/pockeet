@@ -3,6 +3,11 @@
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Network configuration
 const NETWORK = process.env.NEXT_PUBLIC_SUI_NETWORK || 'testnet';
@@ -51,11 +56,25 @@ async function main() {
     console.log('Get testnet SUI from: https://faucet.testnet.sui.io/');
   }
 
+  // Clean build artifacts
+  console.log('\n🧹 Cleaning build artifacts...');
+  const suiDir = path.join(__dirname, '..', 'sui');
+  const buildDir = path.join(suiDir, 'build');
+  
+  try {
+    if (fs.existsSync(buildDir)) {
+      fs.rmSync(buildDir, { recursive: true, force: true });
+      console.log('✅ Build directory cleaned\n');
+    }
+  } catch (error: any) {
+    console.log('⚠️  Could not clean build directory:', error.message);
+  }
+
   // Build the package
-  console.log('\n📦 Building package...');
+  console.log('📦 Building package...');
   try {
     const buildOutput = execSync('sui move build', {
-      cwd: path.join(__dirname, '..', 'sui'),
+      cwd: suiDir,
       encoding: 'utf8',
     });
     console.log(buildOutput);
@@ -71,7 +90,7 @@ async function main() {
     const publishOutput = execSync(
       `sui client publish --gas-budget 300000000 --json`,
       {
-        cwd: path.join(__dirname, '..', 'sui'),
+        cwd: suiDir,
         encoding: 'utf8',
       }
     );

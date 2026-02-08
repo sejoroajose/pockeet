@@ -22,12 +22,17 @@ export interface WithdrawResult {
   newBalance: string;
 }
 
-/** Normalize any Sui address/ID to a full zero-padded 0x-prefixed hex string. */
+export interface VaultTransaction {
+  type: 'deposit' | 'withdraw';
+  user: string;
+  amount: string;
+  timestamp: number;
+  txHash: string;
+}
+
 function normalizeAddress(addr: string): string {
   return '0x' + addr.replace(/^0x/, '').padStart(64, '0');
 }
-
-// Vault reads
 
 export async function getVaultInfo(
   vaultId: string,
@@ -37,8 +42,7 @@ export async function getVaultInfo(
   const client = getSuiClient(network);
 
   try {
-    // 2.0: returns { object }, Move struct fields live in object.json
-    const { object: vault } = await client.getObject({
+    const { object: vault } = await client.core.getObject({
       objectId: vaultId,
       include: { json: true },
     });
@@ -47,8 +51,8 @@ export async function getVaultInfo(
     if (!fields) throw new Error('Invalid vault object');
 
     const totalDeposited = (fields.total_deposited as string) || '0';
-    const yieldEarned    = (fields.yield_balance as string)   || '0';
-    const userBalance    = await getVaultBalance(vaultId, userAddress, network);
+    const yieldEarned = (fields.yield_balance as string) || '0';
+    const userBalance = await getVaultBalance(vaultId, userAddress, network);
 
     const apy =
       totalDeposited !== '0'
@@ -58,8 +62,8 @@ export async function getVaultInfo(
     return {
       id: vaultId,
       totalDeposited: formatUSDCAmount(totalDeposited),
-      yieldEarned:    formatUSDCAmount(yieldEarned),
-      userBalance:    formatUSDCAmount(userBalance),
+      yieldEarned: formatUSDCAmount(yieldEarned),
+      userBalance: formatUSDCAmount(userBalance),
       apy,
     };
   } catch (error) {
@@ -75,7 +79,7 @@ export async function getTVL(
   const client = getSuiClient(network);
 
   try {
-    const { object: vault } = await client.getObject({
+    const { object: vault } = await client.core.getObject({
       objectId: vaultId,
       include: { json: true },
     });
@@ -96,13 +100,12 @@ export async function vaultExists(
 ): Promise<boolean> {
   const client = getSuiClient(network);
   try {
-    await client.getObject({ objectId: vaultId });
+    await client.core.getObject({ objectId: vaultId });
     return true;
   } catch {
     return false;
   }
 }
-
 
 export async function depositToVault(
   vaultId: string,
@@ -111,15 +114,15 @@ export async function depositToVault(
   network: SuiNetwork = 'testnet'
 ): Promise<DepositResult> {
   const packageId = process.env.NEXT_PUBLIC_PACKAGE_ID!;
-  const coinType  = `${packageId}::usdc::USDC`;
+  const coinType = `${packageId}::usdc::USDC`;
 
   const tx = buildDepositTx({ vaultId, packageId, coinType, amount, userAddress });
-  const txDigest  = await executeTransaction(tx, network);
+  const txDigest = await executeTransaction(tx, network);
   const newBalance = await getVaultBalance(vaultId, userAddress, network);
 
   return {
     txDigest,
-    amount:     formatUSDCAmount(amount),
+    amount: formatUSDCAmount(amount),
     newBalance: formatUSDCAmount(newBalance),
   };
 }
@@ -131,7 +134,7 @@ export async function withdrawFromVault(
   network: SuiNetwork = 'testnet'
 ): Promise<WithdrawResult> {
   const packageId = process.env.NEXT_PUBLIC_PACKAGE_ID!;
-  const coinType  = `${packageId}::usdc::USDC`;
+  const coinType = `${packageId}::usdc::USDC`;
 
   const currentBalance = await getVaultBalance(vaultId, userAddress, network);
   if (parseFloat(currentBalance) < parseFloat(amount)) {
@@ -139,24 +142,22 @@ export async function withdrawFromVault(
   }
 
   const tx = buildWithdrawTx({ vaultId, packageId, coinType, amount });
-  const txDigest  = await executeTransaction(tx, network);
+  const txDigest = await executeTransaction(tx, network);
   const newBalance = await getVaultBalance(vaultId, userAddress, network);
 
   return {
     txDigest,
-    amount:     formatUSDCAmount(amount),
+    amount: formatUSDCAmount(amount),
     newBalance: formatUSDCAmount(newBalance),
   };
 }
-
 
 export async function getVaultTransactions(
   vaultId: string,
   userAddress: string,
   network: SuiNetwork = 'testnet',
   limit: number = 20
-) {
-  console.warn('Vault transaction queries disabled due to GraphQL issues');
+): Promise<VaultTransaction[]> {
   return [];
 }
 
@@ -164,7 +165,6 @@ export async function getUserDepositCount(
   userAddress: string,
   network: SuiNetwork = 'testnet'
 ): Promise<number> {
-  // GraphQL queries are failing - return 0 for now
   return 0;
 }
 

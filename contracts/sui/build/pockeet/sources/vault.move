@@ -100,6 +100,10 @@ public fun deposit<T>(
     let depositor = ctx.sender();
     let timestamp = ctx.epoch_timestamp_ms();
 
+    // Add to reserve FIRST
+    vault.reserve.join(payment.into_balance());
+    vault.total_deposited = vault.total_deposited + amount;
+
     // Update user balance
     if (vault.balances.contains(depositor)) {
         let balance = &mut vault.balances[depositor];
@@ -107,11 +111,6 @@ public fun deposit<T>(
     } else {
         vault.balances.add(depositor, amount);
     };
-
-    // Add to reserve
-    let coin_balance = payment.into_balance();
-    vault.reserve.join(coin_balance);
-    vault.total_deposited = vault.total_deposited + amount;
 
     // Get new balance
     let new_balance = vault.balances[depositor];
@@ -175,6 +174,26 @@ public fun add_yield<T>(
     event::emit(YieldEarnedEvent {
         strategy: strategy_name,
         amount,
+        timestamp: ctx.epoch_timestamp_ms(),
+    });
+}
+
+/// DEMO: Simulate yield generation (for hackathon demo)
+/// Admin provides coins to simulate yield
+public fun simulate_yield<T>(
+    _admin: &VaultAdminCap,
+    vault: &mut Vault<T>,
+    yield_payment: Coin<T>,
+    ctx: &mut TxContext
+) {
+    let yield_amount = yield_payment.value();
+    
+    vault.reserve.join(yield_payment.into_balance());
+    vault.yield_balance = vault.yield_balance + yield_amount;
+
+    event::emit(YieldEarnedEvent {
+        strategy: b"Demo Yield Strategy",
+        amount: yield_amount,
         timestamp: ctx.epoch_timestamp_ms(),
     });
 }

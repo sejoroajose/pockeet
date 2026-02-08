@@ -31,11 +31,15 @@ export function useCCTPBridge(sourceChain: CCTPChainConfig) {
     setTxHash(null);
 
     try {
-      const suiRecipient = process.env.NEXT_PUBLIC_VAULT_OBJECT_ID || 
+      const suiRecipient = process.env.NEXT_PUBLIC_SUI_VAULT_OWNER_ADDRESS || 
+        process.env.NEXT_PUBLIC_SUI_ADDRESS ||
         '0x0000000000000000000000000000000000000000000000000000000000000000';
+      
+      if (suiRecipient === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+        throw new Error('Sui recipient address not configured');
+      }
 
       setProgress(10);
-      console.log(`Bridging from ${sourceChain.chain.name} to Sui...`);
 
       const result = await bridgeToSui(walletClient, sourceChain, amount, suiRecipient);
       
@@ -47,11 +51,9 @@ export function useCCTPBridge(sourceChain: CCTPChainConfig) {
       
       setProgress(100);
       setSuccess(true);
-      console.log('Bridge complete!');
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Bridge failed';
       setError(errorMsg);
-      console.error('CCTP bridge error:', err);
     } finally {
       setExecuting(false);
     }

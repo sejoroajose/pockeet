@@ -4,8 +4,13 @@ import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const NETWORK = process.env.SUI_NETWORK || 'testnet';
 const PACKAGE_ID = process.env.NEXT_PUBLIC_PACKAGE_ID;

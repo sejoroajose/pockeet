@@ -2,6 +2,10 @@
 
 import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { SuiGraphQLClient } from '@mysten/sui/graphql';
+import * as path from 'path';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 const NETWORK    = process.env.SUI_NETWORK || 'testnet';
 const RPC_URL    = process.env.SUI_RPC_URL  || 'https://fullnode.testnet.sui.io:443';

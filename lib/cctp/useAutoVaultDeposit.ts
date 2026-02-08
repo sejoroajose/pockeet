@@ -18,21 +18,47 @@ export function useAutoVaultDeposit(
     const autoDeposit = async () => {
       try {
         setStatus('waiting');
-        console.log('Waiting for CCTP attestation...');
         
-        // Wait 3 minutes for CCTP to complete
-        await new Promise(resolve => setTimeout(resolve, 180000));
+        const maxPolls = 40;
+        const pollInterval = 10000;
+        let usdcArrived = false;
+        
+        for (let i = 0; i < maxPolls; i++) {
+          const checkResponse = await fetch('/api/check-sui-balance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userAddress }),
+          });
+          
+          if (!checkResponse.ok) {
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+            continue;
+          }
+          
+          const checkResult = await checkResponse.json();
+          
+          if (checkResult.hasUSDC && checkResult.balance > 0) {
+            usdcArrived = true;
+            break;
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
+        
+        if (!usdcArrived) {
+          setError('CCTP transfer timed out. Please check your Sui address and deposit manually.');
+          setStatus('failed');
+          return;
+        }
         
         setStatus('depositing');
-        console.log('Depositing to vault...');
         
-        // Call auto-deposit API
         const response = await fetch('/api/auto-deposit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             userAddress, 
-            amount: parseFloat(amount) * 1_000_000 // Convert to wei
+            amount: parseFloat(amount) * 1_000_000
           }),
         });
 
@@ -41,14 +67,12 @@ export function useAutoVaultDeposit(
         if (result.success) {
           setVaultTxHash(result.txDigest);
           setStatus('complete');
-          console.log('Auto-deposit complete:', result.txDigest);
         } else {
           setError(result.error || 'Auto-deposit failed');
           setStatus('failed');
         }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-        console.error('Auto-deposit error:', errorMsg);
         setError(errorMsg);
         setStatus('failed');
       }

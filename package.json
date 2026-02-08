@@ -17,8 +17,9 @@
     "create-vault": "tsx contracts/scripts/create-vault.mts",
     "test:deposit": "tsx contracts/scripts/test-deposit.mts",
     "test:withdraw": "tsx contracts/scripts/test-withdraw.mts",
+    "simulate-yield": "tsx contracts/scripts/simulate-yield.mts",
     "vault:info": "tsx contracts/scripts/vault-info.mts",
-    "clean": "cd contracts/sui && rm -rf build",
+    "clean": "tsx contracts/scripts/clean.mts",
     "release": "standard-version",
     "release:dry": "standard-version --dry-run"
   },
