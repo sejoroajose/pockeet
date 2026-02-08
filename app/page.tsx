@@ -18,7 +18,7 @@ export default function Home() {
         >
           <div className="inline-flex items-center space-x-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-medium mb-8">
             <Zap className="h-4 w-4" />
-            <span>HackMoney 2026 - Sui + LI.FI + ENS Integration</span>
+            <span>HackMoney 2026 - Sui + ARC + ENS Integration</span>
           </div>
 
           <h1 className="font-coolvetica text-6xl md:text-7xl font-bold mb-6">
@@ -72,7 +72,7 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-600">
-                  Powered by <span className="font-semibold text-purple-700">LI.FI</span> bridge aggregation
+                  Powered by <span className="font-semibold text-purple-700">ARC</span> bridge aggregation
                 </p>
               </CardContent>
             </Card>
@@ -157,7 +157,7 @@ export default function Home() {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Globe className="h-5 w-5 text-blue-600" />
-                  <span>LI.FI Bridge Integration</span>
+                  <span>ARC Bridge Integration</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -215,7 +215,7 @@ export default function Home() {
       {/* Footer - Minimal */}
       <footer className="border-t border-gray-200 py-8">
         <div className="container mx-auto px-4 text-center text-sm text-gray-600">
-          <p>Built for HackMoney 2026 | Targeting Sui, LI.FI, and ENS prizes</p>
+          <p>Built for HackMoney 2026 | Targeting Sui, ARC, and ENS prizes</p>
           <div className="flex items-center justify-center space-x-4 mt-4">
             <a href="https://github.com/pockeet" className="hover:text-purple-700">GitHub</a>
             <span>•</span>

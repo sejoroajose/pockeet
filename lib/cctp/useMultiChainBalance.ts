@@ -9,6 +9,8 @@ export interface ChainBalance {
   chainName: string;
   balance: bigint;
   formattedBalance: string;
+  icon?: string;
+  config: CCTPChainConfig;
   error?: string;
 }
 
@@ -65,6 +67,7 @@ export function useMultiChainBalance(address: Address | undefined) {
             chainName: config.chain.name,
             balance,
             formattedBalance: formatted,
+            config,
           };
         }
         return null;

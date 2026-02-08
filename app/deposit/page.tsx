@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useConnection } from 'wagmi';
+import { useConnection, useSwitchChain } from 'wagmi';
 import { ArrowLeft, Loader2, Wallet, CheckCircle2, RefreshCw, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -177,16 +177,18 @@ function SuccessView({
 
 export default function DepositPage() {
   const { address, isConnected, chainId } = useConnection();
+  const { switchChain } = useSwitchChain();
   const router = useRouter();
   
   const [selectedChain, setSelectedChain] = useState<CCTPChainConfig>(CCTP_CHAINS.sepolia);
   const [amount, setAmount] = useState('');
   const [balance, setBalance] = useState('0');
   const [balanceLoading, setBalanceLoading] = useState(false);
-  const [showMultiChain, setShowMultiChain] = useState(false);
+  const [showMultiChain, setShowMultiChain] = useState(true);
+  const [switchingChain, setSwitchingChain] = useState(false);
 
   const { balances, totalBalance, loading: multiChainLoading, refetch } = useMultiChainBalance(
-    showMultiChain ? address : undefined 
+    address 
   );
   
   const { execute, executing, progress, error, success, txHash, reset } = useCCTPBridge(selectedChain);
@@ -252,6 +254,22 @@ export default function DepositPage() {
     }
   }, [address, selectedChain]);
 
+  const handleChainSelect = async (chain: CCTPChainConfig) => {
+    setSelectedChain(chain);
+    
+    // If user is on wrong chain, automatically trigger switch
+    if (chainId !== chain.chain.id) {
+      setSwitchingChain(true);
+      try {
+        await switchChain({ chainId: chain.chain.id });
+      } catch (error) {
+        console.error('Failed to switch chain:', error);
+      } finally {
+        setSwitchingChain(false);
+      }
+    }
+  };
+
   const balanceNum = parseFloat(balance);
   const amountNum = parseFloat(amount || '0');
   const isWrongChain = chainId !== selectedChain.chain.id;
@@ -290,7 +308,7 @@ export default function DepositPage() {
       </div>
 
       {/* Multi-Chain Balance Overview */}
-      <Card className="mb-6 border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50">
+      <Card className="mb-6 border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50 relative z-50">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Your USDC Across Chains</CardTitle>
           <Button 
@@ -307,17 +325,22 @@ export default function DepositPage() {
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
               </div>
-            ) : (
+            ) : balances.length > 0 ? (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                   {balances.map((bal) => (
                     <div
                       key={bal.chainId}
-                      className="p-3 bg-white rounded-lg border border-gray-200"
+                      className="p-4 bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition-colors"
                     >
-                      <div className="text-xs text-gray-600 mb-1">{bal.chainName}</div>
-                      <div className="text-lg font-semibold text-gray-900">
-                        {bal.formattedBalance} USDC
+                      <div className="flex items-center space-x-3 mb-2">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                          {bal.chainName.charAt(0)}
+                        </div>
+                        <div className="text-sm font-medium text-gray-600">{bal.chainName}</div>
+                      </div>
+                      <div className="text-xl font-bold text-gray-900">
+                        {bal.formattedBalance} <span className="text-sm text-gray-500">USDC</span>
                       </div>
                     </div>
                   ))}
@@ -327,6 +350,12 @@ export default function DepositPage() {
                   <span className="text-xl font-bold text-gray-900">{totalBalance} USDC</span>
                 </div>
               </>
+            ) : (
+              <div className="text-center py-8">
+                <Wallet className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-600 font-medium">No USDC found</p>
+                <p className="text-sm text-gray-500 mt-1">You don't have USDC on any supported chains</p>
+              </div>
             )}
           </CardContent>
         )}
@@ -339,30 +368,45 @@ export default function DepositPage() {
               <CardContent className="pt-6">
                 <div className="flex items-start space-x-3">
                   <div className="text-2xl">⚠️</div>
-                  <div>
+                  <div className="flex-1">
                     <p className="font-semibold text-orange-900 mb-1">Wrong Network</p>
                     <p className="text-sm text-orange-700 mb-3">
                       Please switch to {selectedChain.chain.name} (Chain ID: {selectedChain.chain.id})
                     </p>
+                    <Button
+                      onClick={() => switchChain({ chainId: selectedChain.chain.id })}
+                      disabled={switchingChain}
+                      size="sm"
+                      className="bg-orange-600 hover:bg-orange-700"
+                    >
+                      {switchingChain ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Switching...
+                        </>
+                      ) : (
+                        `Switch to ${selectedChain.chain.name}`
+                      )}
+                    </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          <Card>
+          <Card className="relative z-40 overflow-visible">
             <CardHeader>
               <CardTitle className="text-lg">Source Chain</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-visible">
               <ChainSelector
                 selectedChain={selectedChain}
-                onChainSelect={setSelectedChain}
+                onChainSelect={handleChainSelect}
               />
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="relative z-10 overflow-visible">
             <CardHeader>
               <CardTitle className="text-lg">Amount</CardTitle>
             </CardHeader>
