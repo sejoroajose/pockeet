@@ -6,7 +6,6 @@ import { useConnection } from 'wagmi'
 import { motion } from 'framer-motion'
 import { Wallet, ArrowDownToLine, History, TrendingUp } from 'lucide-react'
 import { VaultBalance } from '@/components/vault/vault-balance'
-import { WithdrawForm } from '@/components/vault/withdraw-form'
 import { TransactionHistory } from '@/components/vault/transaction-history'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -14,6 +13,7 @@ import { PageLoader } from '@/components/ui/loading'
 import { SUI_CONFIG } from '@/lib/utils/constants'
 import { useVaultInfo } from '@/lib/sui/hooks'
 import { formatAPY } from '@/lib/utils/formatters'
+import { WithdrawForm } from '@/components/vault/withdraw-form';
 
 export default function VaultPage() {
   const { address, isConnected } = useConnection()

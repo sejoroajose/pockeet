@@ -3,19 +3,22 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Wallet, LayoutDashboard, ArrowDownUp, TrendingUp, Settings } from 'lucide-react'
+import { Wallet, LayoutDashboard, ArrowDownUp, TrendingUp } from 'lucide-react'
+import { useConnection } from 'wagmi'
 import { cn } from '@/lib/utils/cn'
 import { ConnectButton } from '../wallet/connect-button'
+import { ENSDisplay } from '@/components/ens/ens-display'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/deposit', label: 'Deposit', icon: ArrowDownUp },
   { href: '/vault', label: 'Vault', icon: Wallet },
-  { href: '/yield', label: 'Yield', icon: TrendingUp },
+  /* { href: '/yield', label: 'Yield', icon: TrendingUp }, */
 ]
 
 export function Header() {
   const pathname = usePathname()
+  const { address, isConnected } = useConnection() 
 
   return (
     <motion.header
@@ -66,9 +69,13 @@ export function Header() {
           })}
         </div>
 
-        {/* Connect Wallet Button */}
+        {/* Connect Wallet Button + ENS Display */}
         <div className="flex items-center space-x-4">
-          <ConnectButton />
+          {isConnected && address ? (
+            <ENSDisplay address={address} />
+          ) : (
+            <ConnectButton />
+          )}
         </div>
       </nav>
     </motion.header>

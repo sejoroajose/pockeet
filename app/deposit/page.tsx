@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useConnection } from 'wagmi';
-import { ArrowLeft, Loader2, Wallet, CheckCircle2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Loader2, Wallet, CheckCircle2, RefreshCw, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,166 @@ import { ChainSelector } from '@/components/cctp/chain-selector';
 import { CCTP_CHAINS, type CCTPChainConfig, getCCTPChain } from '@/lib/arc/chains';
 import { useMultiChainBalance } from '@/lib/cctp/useMultiChainBalance';
 import { fallback } from 'viem';
+import { useAutoVaultDeposit } from '@/lib/cctp/useAutoVaultDeposit';
+
+// Success View Component
+function SuccessView({ 
+  txHash, 
+  autoDepositStatus, 
+  vaultTxHash,
+  autoDepositError,
+  selectedChain, 
+  amount,
+  reset 
+}: {
+  txHash: string;
+  autoDepositStatus: 'idle' | 'waiting' | 'depositing' | 'complete' | 'failed';
+  vaultTxHash: string | null;
+  autoDepositError: string | null;
+  selectedChain: CCTPChainConfig;
+  amount: string;
+  reset: () => void;
+}) {
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-2xl">
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Processing Deposit</h2>
+            
+            {/* Step 1: Bridge Complete */}
+            <div className="w-full p-4 bg-green-50 rounded-lg border border-green-200">
+              <CheckCircle2 className="h-8 w-8 text-green-600 mx-auto mb-2" />
+              <h3 className="font-bold text-green-900">Step 1: Bridge Initiated ✓</h3>
+              <p className="text-sm text-green-700 mb-2">
+                {amount} USDC burned on {selectedChain.chain.name}
+              </p>
+              <a 
+                href={`${selectedChain.chain.blockExplorers?.default.url}/tx/${txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-mono text-blue-600 hover:underline"
+              >
+                {txHash.slice(0, 10)}...{txHash.slice(-8)}
+              </a>
+            </div>
+
+            {/* Step 2: CCTP Processing */}
+            <div className={`w-full p-4 rounded-lg border ${
+              autoDepositStatus === 'waiting' 
+                ? 'bg-blue-50 border-blue-200' 
+                : autoDepositStatus === 'depositing' || autoDepositStatus === 'complete'
+                ? 'bg-green-50 border-green-200'
+                : 'bg-gray-50 border-gray-200'
+            }`}>
+              {autoDepositStatus === 'waiting' ? (
+                <>
+                  <Loader2 className="h-8 w-8 text-blue-600 mx-auto mb-2 animate-spin" />
+                  <h3 className="font-bold text-blue-900">Step 2: Circle CCTP Processing</h3>
+                  <p className="text-sm text-blue-700">
+                    Waiting for attestation (~2-3 minutes)
+                  </p>
+                  <p className="text-xs text-blue-600 mt-2">
+                    Your USDC will arrive on Sui shortly...
+                  </p>
+                </>
+              ) : autoDepositStatus === 'depositing' || autoDepositStatus === 'complete' ? (
+                <>
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                  <h3 className="font-bold text-green-900">Step 2: USDC Arrived on Sui ✓</h3>
+                  <p className="text-sm text-green-700">Circle CCTP transfer complete</p>
+                </>
+              ) : (
+                <>
+                  <div className="h-8 w-8 bg-gray-300 rounded-full mx-auto mb-2 flex items-center justify-center">
+                    <span className="text-gray-600 text-lg">2</span>
+                  </div>
+                  <h3 className="font-bold text-gray-600">Step 2: Pending...</h3>
+                </>
+              )}
+            </div>
+
+            {/* Step 3: Vault Deposit */}
+            <div className={`w-full p-4 rounded-lg border ${
+              autoDepositStatus === 'depositing' 
+                ? 'bg-purple-50 border-purple-200'
+                : autoDepositStatus === 'complete'
+                ? 'bg-green-50 border-green-200'
+                : autoDepositStatus === 'failed'
+                ? 'bg-red-50 border-red-200'
+                : 'bg-gray-50 border-gray-200'
+            }`}>
+              {autoDepositStatus === 'depositing' ? (
+                <>
+                  <Loader2 className="h-8 w-8 text-purple-600 mx-auto mb-2 animate-spin" />
+                  <h3 className="font-bold text-purple-900">Step 3: Depositing to Vault</h3>
+                  <p className="text-sm text-purple-700">
+                    Automatically depositing {amount} USDC into your Sui vault...
+                  </p>
+                </>
+              ) : autoDepositStatus === 'complete' ? (
+                <>
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                  <h3 className="font-bold text-green-900">Step 3: Deposited to Vault ✓</h3>
+                  <p className="text-sm text-green-700 mb-2">
+                    {amount} USDC is now earning yield on Sui!
+                  </p>
+                  {vaultTxHash && (
+                    <a 
+                      href={`https://suiscan.xyz/testnet/tx/${vaultTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-mono text-blue-600 hover:underline"
+                    >
+                      {vaultTxHash.slice(0, 10)}...{vaultTxHash.slice(-8)}
+                    </a>
+                  )}
+                </>
+              ) : autoDepositStatus === 'failed' ? (
+                <>
+                  <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
+                  <h3 className="font-bold text-red-900">Step 3: Auto-Deposit Failed</h3>
+                  <p className="text-sm text-red-700 mb-2">{autoDepositError}</p>
+                  <p className="text-xs text-red-600">
+                    Your USDC is on Sui. You can manually deposit from the vault page.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="h-8 w-8 bg-gray-300 rounded-full mx-auto mb-2 flex items-center justify-center">
+                    <span className="text-gray-600 text-lg">3</span>
+                  </div>
+                  <h3 className="font-bold text-gray-600">Step 3: Pending...</h3>
+                </>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 w-full">
+              <Button onClick={reset} variant="outline" className="flex-1">
+                New Deposit
+              </Button>
+              <Link href="/vault" className="flex-1">
+                <Button 
+                  className="w-full"
+                  disabled={autoDepositStatus !== 'complete'}
+                >
+                  View Vault
+                </Button>
+              </Link>
+            </div>
+
+            {autoDepositStatus === 'waiting' && (
+              <p className="text-xs text-gray-500 mt-4">
+                This page will auto-update. You can safely close this tab.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export default function DepositPage() {
   const { address, isConnected, chainId } = useConnection();
@@ -23,9 +183,19 @@ export default function DepositPage() {
   const [amount, setAmount] = useState('');
   const [balance, setBalance] = useState('0');
   const [balanceLoading, setBalanceLoading] = useState(false);
+  const [showMultiChain, setShowMultiChain] = useState(false);
 
-  const { balances, totalBalance, loading: multiChainLoading, refetch } = useMultiChainBalance(address);
+  const { balances, totalBalance, loading: multiChainLoading, refetch } = useMultiChainBalance(
+    showMultiChain ? address : undefined 
+  );
+  
   const { execute, executing, progress, error, success, txHash, reset } = useCCTPBridge(selectedChain);
+  
+  const { status: autoDepositStatus, vaultTxHash, error: autoDepositError } = useAutoVaultDeposit(
+    txHash,
+    address,
+    amount
+  );
 
   useEffect(() => {
     if (!isConnected) {
@@ -42,7 +212,6 @@ export default function DepositPage() {
     }
   }, [chainId]);
 
-  // Fetch balance for selected chain
   const fetchBalance = async () => {
     if (!address) return;
     
@@ -52,11 +221,11 @@ export default function DepositPage() {
         chain: selectedChain.chain,
         transport: fallback([
           http(selectedChain.rpcUrl),
-          http(), // Fallback to default
+          http(), 
         ], {
           rank: true,
           retryCount: 3,
-          retryDelay: 1000,
+          retryDelay: 2000,
         }),
       });
 
@@ -90,37 +259,18 @@ export default function DepositPage() {
 
   if (!isConnected) return null;
 
+  // Show success view with auto-deposit tracking
   if (success && txHash) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle2 className="h-8 w-8 text-green-600" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Deposit Successful!</h2>
-                <p className="text-gray-600">
-                  Your USDC is being bridged from {selectedChain.chain.name} to Sui via Circle CCTP
-                </p>
-              </div>
-              <div className="w-full p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Transaction Hash</p>
-                <p className="text-sm font-mono text-gray-900 break-all">{txHash}</p>
-              </div>
-              <div className="flex gap-3">
-                <Button onClick={reset} variant="outline">
-                  Make Another Deposit
-                </Button>
-                <Link href="/vault">
-                  <Button>View Vault</Button>
-                </Link>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <SuccessView 
+        txHash={txHash}
+        autoDepositStatus={autoDepositStatus}
+        vaultTxHash={vaultTxHash}
+        autoDepositError={autoDepositError}
+        selectedChain={selectedChain}
+        amount={amount}
+        reset={reset}
+      />
     );
   }
 
@@ -135,42 +285,51 @@ export default function DepositPage() {
         </Link>
         <h1 className="text-3xl font-bold text-gray-900">Deposit USDC</h1>
         <p className="text-gray-600 mt-1">
-          Deposit from any supported chain → Sui Vault via Circle CCTP
+          Deposit from any supported chain → Auto-deposit to Sui Vault via Circle CCTP
         </p>
       </div>
 
       {/* Multi-Chain Balance Overview */}
       <Card className="mb-6 border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Your USDC Across Chains</CardTitle>
+          <Button 
+            onClick={() => setShowMultiChain(!showMultiChain)} 
+            variant="outline"
+            size="sm"
+          >
+            {showMultiChain ? 'Hide' : 'Show'} Balances
+          </Button>
         </CardHeader>
-        <CardContent>
-          {multiChainLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-                {balances.map((bal) => (
-                  <div
-                    key={bal.chainId}
-                    className="p-3 bg-white rounded-lg border border-gray-200"
-                  >
-                    <div className="text-xs text-gray-600 mb-1">{bal.chainName}</div>
-                    <div className="text-lg font-semibold text-gray-900">
-                      {bal.formattedBalance} USDC
+        {showMultiChain && (
+          <CardContent>
+            {multiChainLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                  {balances.map((bal) => (
+                    <div
+                      key={bal.chainId}
+                      className="p-3 bg-white rounded-lg border border-gray-200"
+                    >
+                      <div className="text-xs text-gray-600 mb-1">{bal.chainName}</div>
+                      <div className="text-lg font-semibold text-gray-900">
+                        {bal.formattedBalance} USDC
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                <span className="text-sm font-medium text-gray-700">Total Balance:</span>
-                <span className="text-xl font-bold text-gray-900">{totalBalance} USDC</span>
-              </div>
-            </>
-          )}
-        </CardContent>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                  <span className="text-sm font-medium text-gray-700">Total Balance:</span>
+                  <span className="text-xl font-bold text-gray-900">{totalBalance} USDC</span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        )}
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -322,7 +481,7 @@ export default function DepositPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Est. Time</span>
-                    <span className="font-semibold text-gray-900">~15 mins</span>
+                    <span className="font-semibold text-gray-900">~3 mins</span>
                   </div>
                 </div>
               </div>
